@@ -30,7 +30,7 @@ describe("fitnexx v1 auth", () => {
     ["POST", "/v1/fitnexx/ai/chat", "Sign in to use Fitnexx Pro."],
     ["GET", "/v1/fitnexx/food-analysis", "Sign in to use food analysis."],
     ["POST", "/v1/fitnexx/food-analysis", "Sign in to use food analysis."],
-    ["PATCH", "/v1/fitnexx/food-analysis", "Sign in to review food analysis."],
+    ["PUT", "/v1/fitnexx/food-analysis", "Sign in to use food analysis."],
     ["DELETE", "/v1/fitnexx/food-analysis", "Sign in to delete a food scan."],
   ])("%s %s requires a bearer token", async (method, path, message) => {
     const init = method === "GET" ? { method } : json(method, {});

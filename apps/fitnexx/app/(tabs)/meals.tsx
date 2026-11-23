@@ -32,18 +32,20 @@ import {
   getFoodAnalysisUsage,
   removeFoodAnalysisJob,
   retryFoodAnalysisJob,
-  submitFoodReview,
   subscribeFoodAnalysisJobs,
 } from "../../lib/foodAnalysisQueue";
+import { calculateComponentTotals } from "../../lib/foodAnalysisCore";
 import { useAppStore } from "../../lib/store";
 import { colors, spacing } from "../../lib/theme";
 import type {
   BodyMetrics,
-  DetectedFood,
+  FoodAnalysisItem,
   FoodAnalysisJob,
+  FoodAnalysisResult,
   Meal,
   MealTemplate,
 } from "../../lib/types";
+import { FoodComponentsEditor } from "../../components/food/FoodComponentsEditor";
 
 function estimateTimeToTarget(meals: Meal[], metrics: BodyMetrics): string | null {
   if (!metrics.targetWeight || metrics.targetWeight === metrics.weight) return null;
@@ -249,11 +251,8 @@ export default function MealsScreen() {
   const [lastPhotoUri, setLastPhotoUri] = useState<string | null>(null);
   const [isQueueing, setIsQueueing] = useState(false);
   const [visionStatus, setVisionStatus] = useState<string | null>(null);
-  const [visionReview, setVisionReview] = useState<{
-    scanId: string;
-    items: DetectedFood[];
-  } | null>(null);
-  const [contributeScan, setContributeScan] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<FoodAnalysisResult | null>(null);
+  const [componentGrams, setComponentGrams] = useState<Record<string, number>>({});
   const [analysisUsage, setAnalysisUsage] = useState<FoodAnalysisUsage | null>(null);
 
   useEffect(() => {
@@ -287,6 +286,12 @@ export default function MealsScreen() {
   );
 
   const tdee = latestMetrics ? Math.round(calcTDEE(latestMetrics)) : null;
+
+  const analysisComponents = analysisResult?.components ?? [];
+  const analyzedTotals = useMemo(
+    () => calculateComponentTotals(analysisComponents, componentGrams),
+    [analysisComponents, componentGrams],
+  );
 
   const today = dayKey(new Date());
   const todayMeals = useMemo(
@@ -356,95 +361,12 @@ export default function MealsScreen() {
 
   const rememberPhoto = (uri: string) => setLastPhotoUri(uri);
 
-  const queueDetailedAnalysis = async () => {
-    if (!lastPhotoUri) return;
-    if (!user || isGuest) {
-      Alert.alert(
-        isGuest ? "Account required" : "Sign in required",
-        isGuest
-          ? "Detailed food analysis needs a free account. Your guest data comes with you."
-          : "Sign in to request detailed analysis.",
-        [
-          { text: "Not now", style: "cancel" },
-          { text: isGuest ? "Create account" : "Sign in", onPress: () => router.push("/auth") },
-        ],
-      );
-      return;
-    }
-    setIsQueueing(true);
-    setVisionStatus("Uploading securely and checking foods...");
-    try {
-      const result = await analyzeFoodPhotoOnServer(lastPhotoUri);
-      setVisionReview(result);
-      setContributeScan(false);
-      setVisionStatus(null);
-    } catch (err) {
-      setVisionStatus(null);
-      Alert.alert("Could not queue", err instanceof Error ? err.message : "Try again.");
-    } finally {
-      setIsQueueing(false);
-    }
-  };
-
-  const updateVisionItem = (
-    index: number,
-    field: "name" | "portionDescription" | "preparation" | "portionBucket",
-    value: string,
+  const syncFormFromComponents = (
+    components: FoodAnalysisItem[],
+    grams: Record<string, number>,
   ) => {
-    setVisionReview((current) =>
-      current
-        ? {
-            ...current,
-            items: current.items.map((item, itemIndex) =>
-              itemIndex === index
-                ? {
-                    ...item,
-                    [field]: field === "preparation" ? value || null : value,
-                  }
-                : item,
-            ),
-          }
-        : null,
-    );
-  };
-
-  const confirmVisionReview = async () => {
-    if (!visionReview || !user) return;
-    setIsQueueing(true);
-    try {
-      await submitFoodReview(visionReview.scanId, visionReview.items, contributeScan);
-      await enqueueFoodAnalysis(user.id, visionReview.items, visionReview.scanId);
-      await drainFoodAnalysisQueue({ ownerId: user.id });
-      setVisionReview(null);
-      setContributeScan(false);
-      void getFoodAnalysisUsage()
-        .then(setAnalysisUsage)
-        .catch(() => undefined);
-    } catch (err) {
-      Alert.alert("Could not submit review", err instanceof Error ? err.message : "Try again.");
-    } finally {
-      setIsQueueing(false);
-    }
-  };
-
-  const discardVisionReview = async () => {
-    if (!visionReview) return;
-    setIsQueueing(true);
-    try {
-      await submitFoodReview(visionReview.scanId, visionReview.items, false);
-      setVisionReview(null);
-      setContributeScan(false);
-    } catch (err) {
-      Alert.alert("Could not delete upload", err instanceof Error ? err.message : "Try again.");
-    } finally {
-      setIsQueueing(false);
-    }
-  };
-
-  const applySuggestion = async (job: FoodAnalysisJob) => {
-    if (!job.result) return;
-    const { items, totals } = job.result;
-    setName(items.map((item) => item.name).join(" + ") || name);
+    const totals = calculateComponentTotals(components, grams);
+    setName(components.map((item) => item.name).join(" + ") || name);
     setCalories(String(totals.calories));
     setProtein(String(totals.protein));
     setCarbs(String(totals.carbs));
@@ -458,9 +380,72 @@ export default function MealsScreen() {
         carbs: Math.round(totals.carbs * scale),
         fat: Math.round(totals.fat * scale),
       });
+    } else {
+      setServingPer100(null);
     }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    await removeFoodAnalysisJob(job.id);
+  };
+
+  const openAnalysisResult = (result: FoodAnalysisResult) => {
+    const grams = Object.fromEntries(result.components.map((item) => [item.id, item.grams]));
+    setAnalysisResult(result);
+    setComponentGrams(grams);
+    syncFormFromComponents(result.components, grams);
+  };
+
+  const analyzePhoto = async () => {
+    if (!lastPhotoUri) return;
+    if (!user || isGuest) {
+      Alert.alert(
+        isGuest ? "Account required" : "Sign in required",
+        isGuest
+          ? "Food analysis needs a free account. Your guest data comes with you."
+          : "Sign in to analyze food.",
+        [
+          { text: "Not now", style: "cancel" },
+          { text: isGuest ? "Create account" : "Sign in", onPress: () => router.push("/auth") },
+        ],
+      );
+      return;
+    }
+    setIsQueueing(true);
+    setVisionStatus("Uploading and identifying foods...");
+    try {
+      const { scanId } = await analyzeFoodPhotoOnServer(lastPhotoUri);
+      const job = await enqueueFoodAnalysis(user.id, scanId);
+      await drainFoodAnalysisQueue({ ownerId: user.id });
+      const jobs = await getFoodAnalysisJobs();
+      const ready = jobs.find((item) => item.id === job.id);
+      if (!ready?.result) {
+        throw new Error(ready?.lastError ?? "Analysis is still running. Check back shortly.");
+      }
+      openAnalysisResult(ready.result);
+      setVisionStatus(null);
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      void getFoodAnalysisUsage()
+        .then(setAnalysisUsage)
+        .catch(() => undefined);
+    } catch (err) {
+      setVisionStatus(null);
+      Alert.alert("Could not analyze photo", err instanceof Error ? err.message : "Try again.");
+    } finally {
+      setIsQueueing(false);
+    }
+  };
+
+  const changeComponentGrams = (id: string, grams: number) => {
+    const next = { ...componentGrams, [id]: grams };
+    setComponentGrams(next);
+    syncFormFromComponents(analysisComponents, next);
+  };
+
+  const removeComponent = (id: string) => {
+    if (!analysisResult) return;
+    const components = analysisResult.components.filter((item) => item.id !== id);
+    const grams = { ...componentGrams };
+    delete grams[id];
+    setAnalysisResult({ ...analysisResult, components });
+    setComponentGrams(grams);
+    syncFormFromComponents(components, grams);
   };
 
   const handleServingChange = (t: string) => {
@@ -527,6 +512,7 @@ export default function MealsScreen() {
       protein: parseInt(protein, 10) || 0,
       carbs: parseInt(carbs, 10) || 0,
       fat: parseInt(fat, 10) || 0,
+      fiber: analysisResult ? analyzedTotals.fiber : undefined,
       imageUri,
     };
     await addMeal(meal);
@@ -539,6 +525,8 @@ export default function MealsScreen() {
     setImageUri(undefined);
     setServingPer100(null);
     setServingG("");
+    setAnalysisResult(null);
+    setComponentGrams({});
   };
 
   const manualSet = (setter: (v: string) => void) => (v: string) => {
@@ -1109,7 +1097,7 @@ export default function MealsScreen() {
 
             {lastPhotoUri && (
               <TouchableOpacity
-                onPress={queueDetailedAnalysis}
+                onPress={() => void analyzePhoto()}
                 disabled={isQueueing}
                 style={{
                   backgroundColor: colors.surface,
@@ -1127,9 +1115,7 @@ export default function MealsScreen() {
                     fontWeight: "600",
                   }}
                 >
-                  {isQueueing
-                    ? (visionStatus ?? "Queueing...")
-                    : "Request detailed server analysis"}
+                  {isQueueing ? (visionStatus ?? "Analyzing...") : "Analyze food photo"}
                 </Text>
               </TouchableOpacity>
             )}
@@ -1146,7 +1132,7 @@ export default function MealsScreen() {
               </Text>
             )}
 
-            {visionReview && (
+            {analysisResult && analysisResult.components.length > 0 && (
               <View
                 style={{
                   backgroundColor: colors.surface,
@@ -1158,138 +1144,26 @@ export default function MealsScreen() {
                 }}
               >
                 <View style={{ gap: 3 }}>
-                  <Text
-                    style={{
-                      color: colors.text,
-                      fontSize: 15,
-                      fontWeight: "700",
-                    }}
-                  >
-                    Check what Qwen found
+                  <Text style={{ color: colors.text, fontSize: 15, fontWeight: "700" }}>
+                    Food components
                   </Text>
                   <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                    Correct the visible foods before nutrition lookup.
+                    Change any weight to recalculate macros instantly. No extra AI call.
                   </Text>
                 </View>
-                {visionReview.items.map((item, index) => (
-                  <View
-                    key={`${visionReview.scanId}-${index}`}
-                    style={{ gap: 8, paddingTop: index ? 8 : 0 }}
-                  >
-                    <TextInput
-                      value={item.name}
-                      onChangeText={(value) => updateVisionItem(index, "name", value)}
-                      placeholder="Food name"
-                      placeholderTextColor={colors.textMuted}
-                      style={{
-                        color: colors.text,
-                        borderBottomWidth: 1,
-                        borderColor: colors.border,
-                        paddingVertical: 8,
-                      }}
-                    />
-                    <TextInput
-                      value={item.portionDescription}
-                      onChangeText={(value) => updateVisionItem(index, "portionDescription", value)}
-                      placeholder="Visible portion"
-                      placeholderTextColor={colors.textMuted}
-                      style={{
-                        color: colors.text,
-                        borderBottomWidth: 1,
-                        borderColor: colors.border,
-                        paddingVertical: 8,
-                      }}
-                    />
-                    <TextInput
-                      value={item.preparation ?? ""}
-                      onChangeText={(value) => updateVisionItem(index, "preparation", value)}
-                      placeholder="Preparation, optional"
-                      placeholderTextColor={colors.textMuted}
-                      style={{
-                        color: colors.text,
-                        borderBottomWidth: 1,
-                        borderColor: colors.border,
-                        paddingVertical: 8,
-                      }}
-                    />
-                    <View style={{ flexDirection: "row", gap: 6 }}>
-                      {(["small", "typical", "large", "unknown"] as const).map((bucket) => (
-                        <TouchableOpacity
-                          key={bucket}
-                          onPress={() => updateVisionItem(index, "portionBucket", bucket)}
-                          style={{
-                            flex: 1,
-                            borderRadius: 7,
-                            paddingVertical: 7,
-                            alignItems: "center",
-                            backgroundColor:
-                              item.portionBucket === bucket ? colors.brand : colors.background,
-                          }}
-                        >
-                          <Text
-                            style={{
-                              color:
-                                item.portionBucket === bucket
-                                  ? colors.onBrand
-                                  : colors.textSecondary,
-                              fontSize: 10,
-                              textTransform: "capitalize",
-                            }}
-                          >
-                            {bucket}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-                ))}
-                <TouchableOpacity
-                  onPress={() => setContributeScan((value) => !value)}
-                  style={{
-                    flexDirection: "row",
-                    gap: 10,
-                    alignItems: "center",
-                  }}
-                >
-                  <Ionicons
-                    name={contributeScan ? "checkbox" : "square-outline"}
-                    size={22}
-                    color={contributeScan ? colors.brand : colors.textMuted}
-                  />
-                  <Text
-                    style={{
-                      color: colors.textSecondary,
-                      fontSize: 12,
-                      flex: 1,
-                    }}
-                  >
-                    Keep this image and my corrections to improve the food model. This is optional
-                    and off by default.
+                <FoodComponentsEditor
+                  components={analysisResult.components}
+                  gramsById={componentGrams}
+                  onChangeGrams={changeComponentGrams}
+                  onRemove={removeComponent}
+                />
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ color: colors.success, fontSize: 13, fontWeight: "700" }}>
+                    Total {analyzedTotals.grams}g · {analyzedTotals.calories} kcal
                   </Text>
-                </TouchableOpacity>
-                <View style={{ flexDirection: "row", gap: 8 }}>
-                  <TouchableOpacity
-                    onPress={() => void discardVisionReview()}
-                    disabled={isQueueing}
-                    style={{ padding: 12, alignItems: "center" }}
-                  >
-                    <Text style={{ color: colors.danger, fontWeight: "600" }}>Delete upload</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => void confirmVisionReview()}
-                    disabled={isQueueing}
-                    style={{
-                      flex: 1,
-                      backgroundColor: colors.brand,
-                      borderRadius: 8,
-                      padding: 12,
-                      alignItems: "center",
-                    }}
-                  >
-                    <Text style={{ color: colors.onBrand, fontWeight: "700" }}>
-                      {isQueueing ? "Submitting..." : "Use reviewed foods"}
-                    </Text>
-                  </TouchableOpacity>
+                  <Text style={{ color: colors.textMuted, fontSize: 11 }}>
+                    {analysisResult.cacheHits} reused
+                  </Text>
                 </View>
               </View>
             )}
@@ -1340,7 +1214,8 @@ export default function MealsScreen() {
                         fontWeight: "600",
                       }}
                     >
-                      {job.request.detectedItems.map((item) => item.name).join(" + ")}
+                      {job.result?.components.map((item) => item.name).join(" + ") ??
+                        "Food scan queued"}
                     </Text>
                     {job.status === "ready" && job.result ? (
                       <>
@@ -1362,7 +1237,11 @@ export default function MealsScreen() {
                           }}
                         >
                           <TouchableOpacity
-                            onPress={() => void applySuggestion(job)}
+                            onPress={() => {
+                              if (!job.result) return;
+                              openAnalysisResult(job.result);
+                              void removeFoodAnalysisJob(job.id);
+                            }}
                             style={{
                               flex: 1,
                               backgroundColor: colors.brand,

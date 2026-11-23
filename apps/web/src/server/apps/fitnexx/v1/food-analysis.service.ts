@@ -1,26 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
-import { ApiError, messageOf, statusOf } from "../../../shared/errors";
-import { fitnexxEnv } from "../env";
-import {
-  type AnalysisItem,
-  buildFoodChoiceQuestion,
-  buildPortionChoiceQuestion,
-  buildTrainingGateQuestion,
-  calculateMacros,
-  callJevDecisions,
-  callQwenFoodVision,
-  FOOD_ANALYSIS_MODEL,
-  FOOD_SCAN_BUCKET,
-  FOOD_TRAINING_POLICY_VERSION,
-  fetchUsdaCandidates,
-  fetchUsdaDetails,
-  parseChoiceAnswer,
-  parseFoodAnalysisInput,
-  parseFoodReviewInput,
-  parseFoodVisionInput,
-  toUsdaQuery,
-} from "../lib/food-analysis";
+import { messageOf, statusOf, ApiError } from "../../../shared/errors";
 import { getSupabaseAdmin } from "../../../shared/supabase";
+import { fitnexxEnv } from "../env";
+import { FOOD_SCAN_BUCKET } from "../lib/food-scanner/constants";
+import { FOOD_SCAN_PIPELINE_VERSION, type FoodScanResult } from "../lib/food-scanner/schemas";
+import { runFoodScanPipeline } from "../lib/food-scanner/pipeline";
 
 const FREE_DAILY_LIMIT = 10;
 const PRO_DAILY_LIMIT = 100;
@@ -43,13 +27,26 @@ type ClaimResult =
   | { action: "in-progress" }
   | { action: "cached"; response: Record<string, unknown> };
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
+function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** A vision request names a scan but has no detected items yet. */
-export function isVisionRequest(body: unknown): boolean {
-  return isRecord(body) && "scanId" in body && !("detectedItems" in body);
+function validId(value: unknown, name: string): string {
+  if (
+    typeof value !== "string" ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+  ) {
+    throw new Error(`Invalid ${name}.`);
+  }
+  return value;
+}
+
+function parseScanRequest(body: unknown): { requestId: string; scanId: string } {
+  if (!isRecord(body)) throw new Error("Invalid food scan request.");
+  return {
+    requestId: validId(body.requestId, "request ID"),
+    scanId: validId(body.scanId, "scan ID"),
+  };
 }
 
 export async function getUsage(userId: string): Promise<Usage> {
@@ -63,20 +60,6 @@ export async function getUsage(userId: string): Promise<Usage> {
   const today = new Date().toISOString().slice(0, 10);
   const used = account?.foodAnalysisDay === today ? Number(account.foodAnalysisCount ?? 0) : 0;
   return { isPro, limit, remaining: Math.max(0, limit - used) };
-}
-
-/** Active model release, with 1 in 20 users (stable by id) on the canary when one exists. */
-async function getFoodModel(userId: string): Promise<string> {
-  const fallback = fitnexxEnv.foodVisionModel;
-  const { data } = await getSupabaseAdmin()
-    .from("food_model_release")
-    .select("version,status")
-    .in("status", ["active", "canary"]);
-  const active = data?.find((release) => release.status === "active")?.version;
-  const canary = data?.find((release) => release.status === "canary")?.version;
-  if (!canary) return active ?? fallback;
-  const bucket = Number.parseInt(createHash("sha256").update(userId).digest("hex").slice(0, 8), 16);
-  return bucket % 20 === 0 ? canary : (active ?? fallback);
 }
 
 async function consumeUsage(userId: string, isPro: boolean): Promise<void> {
@@ -141,59 +124,6 @@ export async function prepareUpload(userId: string, body: unknown) {
   }
 }
 
-/** Runs the server vision model on an uploaded scan (cached per scan). */
-export async function analyzeScan(userId: string, body: unknown) {
-  const usage = await getUsage(userId);
-  try {
-    const { scanId } = parseFoodVisionInput(body);
-    const admin = getSupabaseAdmin();
-    const { data: scan, error: scanError } = await admin
-      .from("food_scan")
-      .select("storage_path,status,prediction,model_version")
-      .eq("id", scanId)
-      .eq("user_id", userId)
-      .maybeSingle();
-    if (scanError) throw scanError;
-    if (!scan) throw new ApiError(404, "Food scan was not found.");
-    if (scan.prediction && scan.model_version) {
-      return { scanId, items: scan.prediction, modelVersion: scan.model_version };
-    }
-    if (usage.remaining <= 0) {
-      throw new ApiError(429, "Daily food analysis limit reached.", { retryable: false });
-    }
-
-    const { foodVisionUrl: endpoint, foodVisionKey: apiKey } = fitnexxEnv;
-    const model = await getFoodModel(userId);
-    if (!endpoint || !apiKey) {
-      throw new ApiError(503, "Server food vision is not configured.", { retryable: true });
-    }
-    const { data: signed, error: signedError } = await admin.storage
-      .from(FOOD_SCAN_BUCKET)
-      .createSignedUrl(scan.storage_path, 120);
-    if (signedError) throw signedError;
-    const result = await callQwenFoodVision(signed.signedUrl, endpoint, apiKey, model);
-    const { error: updateError } = await admin
-      .from("food_scan")
-      .update({
-        status: "analyzed",
-        prediction: result.items,
-        model_version: result.modelVersion,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", scanId)
-      .eq("user_id", userId);
-    if (updateError) throw updateError;
-    await consumeUsage(userId, usage.isPro);
-    return { scanId, items: result.items, modelVersion: result.modelVersion };
-  } catch (error) {
-    if (error instanceof ApiError) throw error;
-    const status = statusOf(error);
-    throw new ApiError(status ?? 502, messageOf(error, "Food vision failed."), {
-      retryable: status === undefined ? true : status >= 500,
-    });
-  }
-}
-
 async function claimRequest(
   userId: string,
   requestId: string,
@@ -208,42 +138,19 @@ async function claimRequest(
   return data as ClaimResult;
 }
 
-/** Matches detected foods to USDA records and portions, returning macros. Idempotent per requestId. */
-export async function analyzeNutrition(userId: string, body: unknown) {
+/** Runs both AI steps, saves reusable component profiles, and returns editable portions. */
+export async function analyzeScan(userId: string, body: unknown): Promise<FoodScanResult> {
   const usage = await getUsage(userId);
-  let input: ReturnType<typeof parseFoodAnalysisInput>;
+  let input: ReturnType<typeof parseScanRequest>;
   try {
-    input = parseFoodAnalysisInput(body);
+    input = parseScanRequest(body);
   } catch (error) {
     throw new ApiError(400, messageOf(error, "Invalid request."));
   }
-  if (!input.scanId && usage.remaining <= 0) {
-    throw new ApiError(
-      429,
-      usage.isPro
-        ? "Daily food analysis limit reached. Try again tomorrow."
-        : `Free food analysis limit reached (${usage.limit}/day). Try again tomorrow.`,
-      { retryable: false },
-    );
-  }
-  if (input.scanId) {
-    const { data: scan, error } = await getSupabaseAdmin()
-      .from("food_scan")
-      .select("status,reviewed_label")
-      .eq("id", input.scanId)
-      .eq("user_id", userId)
-      .maybeSingle();
-    if (error) throw new ApiError(500, error.message);
-    if (
-      !scan ||
-      !["eligible", "review", "discarded"].includes(scan.status) ||
-      JSON.stringify(scan.reviewed_label) !== JSON.stringify(input.detectedItems)
-    ) {
-      throw new ApiError(400, "Review the food scan before nutrition lookup.");
-    }
-  }
 
-  const requestHash = createHash("sha256").update(JSON.stringify(input)).digest("hex");
+  const requestHash = createHash("sha256")
+    .update(JSON.stringify({ scanId: input.scanId }))
+    .digest("hex");
   let claim: ClaimResult;
   try {
     claim = await claimRequest(userId, input.requestId, requestHash);
@@ -253,188 +160,77 @@ export async function analyzeNutrition(userId: string, body: unknown) {
     }
     throw new ApiError(500, messageOf(error, "Request failed."));
   }
-  if (claim.action === "cached") return claim.response;
+  if (claim.action === "cached") return claim.response as FoodScanResult;
   if (claim.action === "in-progress") {
     throw new ApiError(429, "Analysis already in progress. Try again shortly.", {
       retryable: true,
     });
   }
 
-  const { usdaApiKey: usdaKey, openrouterApiKey: openrouterKey } = fitnexxEnv;
-  if (!usdaKey) {
-    throw new ApiError(503, "Nutrition lookup is not configured.", { retryable: true });
-  }
-  if (!openrouterKey) {
-    throw new ApiError(503, "Food decisions are not configured.", { retryable: true });
-  }
-
   try {
-    const items: AnalysisItem[] = [];
-    for (const food of input.detectedItems) {
-      const candidates = await fetchUsdaCandidates(toUsdaQuery(food), usdaKey);
-      if (candidates.length === 0) throw new Error(`No nutrition match for "${food.name}".`);
-      const foodQuestion = buildFoodChoiceQuestion(candidates);
-      const foodAnswers = await callJevDecisions(
-        {
-          food: food.name,
-          preparation: food.preparation,
-          portion: food.portionDescription,
-          portionBucket: food.portionBucket,
-        },
-        { food: foodQuestion },
-        openrouterKey,
-        FOOD_ANALYSIS_MODEL,
-      );
-      const foodAnswer = parseChoiceAnswer(foodAnswers.food, Object.keys(foodQuestion.criteria));
-      const match = candidates.find((item) => `fdc_${item.fdcId}` === foodAnswer.choice);
-      if (!match) throw new Error("Jev returned an unknown food.");
-
-      // Full record for the selected food only, so serving indexes below
-      // always refer to this food and never to another candidate.
-      const detail = await fetchUsdaDetails(match.fdcId, usdaKey);
-      const portionQuestion = buildPortionChoiceQuestion(food.portionDescription, detail.servings);
-      const portionAnswers = await callJevDecisions(
-        {
-          food: detail.description,
-          portion: food.portionDescription,
-          portionBucket: food.portionBucket,
-        },
-        { portion: portionQuestion },
-        openrouterKey,
-        FOOD_ANALYSIS_MODEL,
-      );
-      const portionAnswer = parseChoiceAnswer(
-        portionAnswers.portion,
-        Object.keys(portionQuestion.criteria),
-      );
-      const portionIndex = Number(portionAnswer.choice.split("_")[1]);
-      const serving = detail.servings[portionIndex] ?? detail.servings[0];
-      const macros = calculateMacros(
-        {
-          kcal: detail.kcalPer100,
-          protein: detail.proteinPer100,
-          carbs: detail.carbsPer100,
-          fat: detail.fatPer100,
-        },
-        serving.grams,
-      );
-      items.push({
-        name: detail.description,
-        fdcId: detail.fdcId,
-        grams: serving.grams,
-        ...macros,
-        confidence: Math.min(1, Math.max(0, foodAnswer.confidence)),
-      });
+    const admin = getSupabaseAdmin();
+    const { data: scan, error: scanError } = await admin
+      .from("food_scan")
+      .select("storage_path,status,prediction,pipeline_version")
+      .eq("id", input.scanId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (scanError) throw scanError;
+    if (!scan) throw new ApiError(404, "Food scan was not found.");
+    if (scan.prediction && scan.pipeline_version === FOOD_SCAN_PIPELINE_VERSION) {
+      const cached = { ...(scan.prediction as FoodScanResult), requestId: input.requestId };
+      await complete(userId, input.requestId, cached);
+      return cached;
     }
-    const totals = items.reduce(
-      (total, item) => ({
-        grams: total.grams + item.grams,
-        calories: total.calories + item.calories,
-        protein: total.protein + item.protein,
-        carbs: total.carbs + item.carbs,
-        fat: total.fat + item.fat,
-      }),
-      { grams: 0, calories: 0, protein: 0, carbs: 0, fat: 0 },
-    );
-    const response = { requestId: input.requestId, items, totals };
+    if (usage.remaining <= 0) {
+      throw new ApiError(429, "Daily food analysis limit reached.", { retryable: false });
+    }
 
-    // Count usage only after a successful analysis.
-    if (!input.scanId) await consumeUsage(userId, usage.isPro);
-    await getSupabaseAdmin().rpc("complete_food_analysis_request", {
-      p_user_id: userId,
-      p_request_id: input.requestId,
-      p_response: response,
+    const openrouterKey = fitnexxEnv.openrouterApiKey;
+    if (!openrouterKey) {
+      throw new ApiError(503, "Food analysis is not configured.", { retryable: true });
+    }
+    const { data: signed, error: signedError } = await admin.storage
+      .from(FOOD_SCAN_BUCKET)
+      .createSignedUrl(scan.storage_path, 120);
+    if (signedError) throw signedError;
+
+    const result = await runFoodScanPipeline({
+      requestId: input.requestId,
+      scanId: input.scanId,
+      imageUrl: signed.signedUrl,
+      openrouterKey,
+      usdaKey: fitnexxEnv.usdaApiKey,
+      visionModel: fitnexxEnv.foodVisionModel,
+      nutritionModel: fitnexxEnv.foodNutritionModel,
     });
-    return response;
+    await consumeUsage(userId, usage.isPro);
+    await complete(userId, input.requestId, result);
+    return result;
   } catch (error) {
+    if (error instanceof ApiError) throw error;
     const status = statusOf(error);
     const retryable =
       status !== undefined
         ? status === 408 || status === 429 || status >= 500
         : /timeout|network|fetch|econn|enotfound|socket/i.test(messageOf(error, ""));
-    throw new ApiError(status ?? 400, messageOf(error, "Food analysis failed."), { retryable });
+    throw new ApiError(status ?? 502, messageOf(error, "Food analysis failed."), { retryable });
   }
 }
 
-/** Saves the user's corrected labels; optionally gates the scan for model training. */
-export async function reviewScan(userId: string, body: unknown) {
-  try {
-    const input = parseFoodReviewInput(body);
-    const admin = getSupabaseAdmin();
-    const { data: scan, error: scanError } = await admin
-      .from("food_scan")
-      .select("storage_path,prediction")
-      .eq("id", input.scanId)
-      .eq("user_id", userId)
-      .maybeSingle();
-    if (scanError) throw scanError;
-    if (!scan?.prediction) throw new ApiError(404, "Food scan was not found or has not finished.");
-
-    if (!input.contribute) {
-      const { error: removeError } = await admin.storage
-        .from(FOOD_SCAN_BUCKET)
-        .remove([scan.storage_path]);
-      if (removeError) throw removeError;
-      const now = new Date().toISOString();
-      const { error: updateError } = await admin
-        .from("food_scan")
-        .update({
-          status: "discarded",
-          reviewed_label: input.reviewedItems,
-          updated_at: now,
-          expires_at: now,
-        })
-        .eq("id", input.scanId)
-        .eq("user_id", userId);
-      if (updateError) throw updateError;
-      return { decision: "discarded" as const };
-    }
-
-    const openrouterKey = fitnexxEnv.openrouterApiKey;
-    if (!openrouterKey) throw new ApiError(503, "Training review is not configured.");
-    const gateQuestion = buildTrainingGateQuestion();
-    const answers = await callJevDecisions(
-      { prediction: scan.prediction, reviewedItems: input.reviewedItems },
-      { training: gateQuestion },
-      openrouterKey,
-    );
-    const gate = parseChoiceAnswer(answers.training, Object.keys(gateQuestion.criteria));
-    const decision = gate.choice as "eligible" | "review" | "reject";
-    const confidence = Math.min(1, Math.max(0, gate.confidence));
-    const now = new Date().toISOString();
-    if (decision === "reject") {
-      const { error: removeError } = await admin.storage
-        .from(FOOD_SCAN_BUCKET)
-        .remove([scan.storage_path]);
-      if (removeError) throw removeError;
-    }
-    const { error: updateError } = await admin
-      .from("food_scan")
-      .update({
-        status: decision === "reject" ? "rejected" : decision,
-        reviewed_label: input.reviewedItems,
-        gate_decision: decision,
-        gate_confidence: confidence,
-        contribution_policy_version: FOOD_TRAINING_POLICY_VERSION,
-        contributed_at: now,
-        withdrawn_at: decision === "reject" ? now : null,
-        updated_at: now,
-        expires_at: null,
-      })
-      .eq("id", input.scanId)
-      .eq("user_id", userId);
-    if (updateError) throw updateError;
-    return { decision, confidence };
-  } catch (error) {
-    if (error instanceof ApiError) throw error;
-    throw new ApiError(statusOf(error) ?? 400, messageOf(error, "Could not save food review."));
-  }
+async function complete(userId: string, requestId: string, response: FoodScanResult) {
+  await getSupabaseAdmin().rpc("complete_food_analysis_request", {
+    p_user_id: userId,
+    p_request_id: requestId,
+    p_response: response,
+  });
 }
 
 /** Deletes a scan and its image. Missing scans are treated as already deleted. */
 export async function deleteScan(userId: string, body: unknown): Promise<void> {
   try {
-    const { scanId } = parseFoodVisionInput(body);
+    if (!isRecord(body)) throw new Error("Invalid request.");
+    const scanId = validId(body.scanId, "scan ID");
     const admin = getSupabaseAdmin();
     const { data: scan, error } = await admin
       .from("food_scan")

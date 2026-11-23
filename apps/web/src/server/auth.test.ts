@@ -103,7 +103,7 @@ describe("guests (toggled per app)", () => {
     expect(calls).not.toContain("select:isPro");
   });
 
-  test.each(["PUT", "POST", "PATCH"])("guests can't %s food analysis", async (method) => {
+  test.each(["PUT", "POST"])("guests can't %s food analysis", async (method) => {
     process.env.FITNEXX_ALLOW_GUESTS = "true";
     const res = await app.handle(
       new Request("http://localhost/api/v1/fitnexx/food-analysis", {

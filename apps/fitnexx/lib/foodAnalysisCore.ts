@@ -1,9 +1,9 @@
-import { parseDetectedFoods } from "./foodVision";
 import type {
   FoodAnalysisItem,
   FoodAnalysisJob,
   FoodAnalysisResult,
   FoodAnalysisTotals,
+  NutrientValues,
 } from "./types";
 
 export const FOOD_ANALYSIS_MAX_ATTEMPTS = 25;
@@ -15,72 +15,116 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-export function calculateItemMacros(
-  per100: { calories: number; protein: number; carbs: number; fat: number },
-  grams: number,
-): { calories: number; protein: number; carbs: number; fat: number } {
+function round(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+/** Portion changes are pure arithmetic: grams multiplied by values saved per gram. */
+export function calculateItemMacros(perGram: NutrientValues, grams: number): NutrientValues {
   if (!Number.isFinite(grams) || grams <= 0 || grams > 5000) {
     throw new Error("Grams must be between 0 and 5000.");
   }
-  for (const [key, value] of Object.entries(per100)) {
+  for (const [key, value] of Object.entries(perGram)) {
     if (!Number.isFinite(value) || value < 0 || value > 1000) {
-      throw new Error(`Invalid per-100g value: ${key}.`);
+      throw new Error(`Invalid per-gram value: ${key}.`);
     }
   }
-  const scale = grams / 100;
   return {
-    calories: Math.round(per100.calories * scale),
-    protein: Math.round(per100.protein * scale),
-    carbs: Math.round(per100.carbs * scale),
-    fat: Math.round(per100.fat * scale),
+    calories: round(perGram.calories * grams),
+    protein: round(perGram.protein * grams),
+    carbs: round(perGram.carbs * grams),
+    fat: round(perGram.fat * grams),
+    fiber: round(perGram.fiber * grams),
   };
 }
 
+export function calculateComponentTotals(
+  components: FoodAnalysisItem[],
+  gramsById: Record<string, number>,
+): FoodAnalysisTotals {
+  return components.reduce<FoodAnalysisTotals>(
+    (total, component) => {
+      const grams = gramsById[component.id] ?? component.grams;
+      const macros = calculateItemMacros(component.perGram, grams);
+      return {
+        grams: round(total.grams + grams),
+        calories: round(total.calories + macros.calories),
+        protein: round(total.protein + macros.protein),
+        carbs: round(total.carbs + macros.carbs),
+        fat: round(total.fat + macros.fat),
+        fiber: round(total.fiber + macros.fiber),
+      };
+    },
+    { grams: 0, calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 },
+  );
+}
+
 export function sumTotals(items: FoodAnalysisItem[]): FoodAnalysisTotals {
-  return items.reduce(
-    (total, item) => ({
-      grams: total.grams + item.grams,
-      calories: total.calories + item.calories,
-      protein: total.protein + item.protein,
-      carbs: total.carbs + item.carbs,
-      fat: total.fat + item.fat,
-    }),
-    { grams: 0, calories: 0, protein: 0, carbs: 0, fat: 0 },
+  return calculateComponentTotals(
+    items,
+    Object.fromEntries(items.map((item) => [item.id, item.grams])),
+  );
+}
+
+function isNutrientValues(value: unknown): value is NutrientValues {
+  if (!isRecord(value)) return false;
+  return ["calories", "protein", "carbs", "fat", "fiber"].every(
+    (key) =>
+      typeof value[key] === "number" && Number.isFinite(value[key]) && (value[key] as number) >= 0,
   );
 }
 
 function parseAnalysisItem(value: unknown): FoodAnalysisItem {
   if (!isRecord(value)) throw new Error("Invalid analysis item.");
-  const text = (field: string): string => {
-    const text = value[field];
-    if (typeof text !== "string" || !text.trim() || text.length > 200) {
+  const text = (field: string, max: number): string => {
+    const item = value[field];
+    if (typeof item !== "string" || !item.trim() || item.length > max) {
       throw new Error(`Invalid analysis item field: ${field}.`);
     }
-    return text.trim();
+    return item.trim();
   };
   const amount = (field: string, max: number): number => {
-    const amount = value[field];
-    if (typeof amount !== "number" || !Number.isFinite(amount)) {
+    const item = value[field];
+    if (typeof item !== "number" || !Number.isFinite(item) || item < 0 || item > max) {
       throw new Error(`Invalid analysis item field: ${field}.`);
     }
-    if (field === "confidence") {
-      if (amount < 0 || amount > 1) throw new Error("Invalid confidence.");
-      return amount;
-    }
-    if (amount < 0 || amount > max || (field === "grams" && amount === 0)) {
-      throw new Error(`Invalid analysis item field: ${field}.`);
-    }
-    return amount;
+    return item;
   };
+  const consistency = value.consistency;
+  if (!isRecord(consistency)) throw new Error("Invalid consistency check.");
   return {
-    name: text("name"),
-    fdcId: text("fdcId"),
+    id: text("id", 120),
+    componentId: typeof value.componentId === "string" ? value.componentId : null,
+    name: text("name", 120),
+    preparation: typeof value.preparation === "string" ? value.preparation.slice(0, 120) : null,
+    portionDescription: text("portionDescription", 280),
     grams: amount("grams", 5000),
-    calories: amount("calories", 20000),
-    protein: amount("protein", 5000),
-    carbs: amount("carbs", 5000),
-    fat: amount("fat", 5000),
+    estimatedGrams: amount("estimatedGrams", 5000),
+    per100: isNutrientValues(value.per100)
+      ? value.per100
+      : (() => {
+          throw new Error("Invalid per-100g values.");
+        })(),
+    perGram: isNutrientValues(value.perGram)
+      ? value.perGram
+      : (() => {
+          throw new Error("Invalid per-gram values.");
+        })(),
+    source: value.source === "usda" ? "usda" : "ai",
+    fdcId: typeof value.fdcId === "string" ? value.fdcId : null,
     confidence: amount("confidence", 1),
+    consistency: {
+      expectedCalories:
+        typeof consistency.expectedCalories === "number" && consistency.expectedCalories >= 0
+          ? consistency.expectedCalories
+          : 0,
+      delta:
+        typeof consistency.delta === "number" && Number.isFinite(consistency.delta)
+          ? consistency.delta
+          : 0,
+      ok: consistency.ok === true,
+      note: typeof consistency.note === "string" ? consistency.note.slice(0, 280) : "",
+    },
   };
 }
 
@@ -89,11 +133,22 @@ export function parseAnalysisResult(value: unknown): FoodAnalysisResult {
   if (typeof value.requestId !== "string" || !value.requestId) {
     throw new Error("Analysis result needs a request ID.");
   }
-  if (!Array.isArray(value.items) || value.items.length === 0) {
-    throw new Error("Analysis result needs at least one item.");
+  if (typeof value.scanId !== "string" || !value.scanId) {
+    throw new Error("Analysis result needs a scan ID.");
   }
-  const items = value.items.map(parseAnalysisItem);
-  return { requestId: value.requestId, items, totals: sumTotals(items) };
+  if (!Array.isArray(value.components) || value.components.length === 0) {
+    throw new Error("Analysis result needs at least one component.");
+  }
+  const components = value.components.map(parseAnalysisItem);
+  return {
+    requestId: value.requestId,
+    scanId: value.scanId,
+    components,
+    totals: sumTotals(components),
+    visionModel: typeof value.visionModel === "string" ? value.visionModel : "unknown",
+    nutritionModel: typeof value.nutritionModel === "string" ? value.nutritionModel : "unknown",
+    cacheHits: typeof value.cacheHits === "number" ? value.cacheHits : 0,
+  };
 }
 
 export function parseAnalysisJob(value: unknown): FoodAnalysisJob {
@@ -120,14 +175,14 @@ export function parseAnalysisJob(value: unknown): FoodAnalysisJob {
   if (value.status !== "pending" && value.status !== "ready" && value.status !== "failed") {
     throw new Error("Analysis job needs a valid status.");
   }
-  if (typeof value.request !== "object" || value.request === null) {
-    throw new Error("Analysis job needs a request.");
-  }
-  const request = value.request as Record<string, unknown>;
+  if (!isRecord(value.request)) throw new Error("Analysis job needs a request.");
+  const request = value.request;
   if (request.requestId !== value.id) {
     throw new Error("Analysis request ID must match the job ID.");
   }
-  const detectedItems = parseDetectedFoods(request.detectedItems);
+  if (typeof request.scanId !== "string" || !request.scanId) {
+    throw new Error("Analysis request needs a scan ID.");
+  }
   const job: FoodAnalysisJob = {
     id: value.id,
     ownerId: value.ownerId,
@@ -135,9 +190,8 @@ export function parseAnalysisJob(value: unknown): FoodAnalysisJob {
     nextAttemptAt: value.nextAttemptAt,
     attempts: value.attempts,
     status: value.status,
-    request: { requestId: value.id, detectedItems },
+    request: { requestId: value.id, scanId: request.scanId },
   };
-  if (typeof request.scanId === "string") job.request.scanId = request.scanId;
   if (value.result !== undefined) {
     const result = parseAnalysisResult(value.result);
     if (result.requestId !== value.id) {
@@ -146,9 +200,7 @@ export function parseAnalysisJob(value: unknown): FoodAnalysisJob {
     job.result = result;
   }
   if (value.lastError !== undefined) {
-    if (typeof value.lastError !== "string") {
-      throw new Error("Invalid job error.");
-    }
+    if (typeof value.lastError !== "string") throw new Error("Invalid job error.");
     job.lastError = value.lastError;
   }
   return job;

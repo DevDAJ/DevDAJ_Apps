@@ -2,6 +2,7 @@ import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { ChatOpenAI } from "@langchain/openai";
 import type { BaseLanguageModelInput } from "@langchain/core/language_models/base";
+import { OPENROUTER_BASE_URL, OPENROUTER_MODEL_KWARGS } from "../openrouter";
 import {
   NutritionResultSchema,
   VisionComponentSchema,
@@ -9,8 +10,6 @@ import {
   type NutritionResult,
   type VisionResult,
 } from "./schemas";
-
-const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 
 export const VISION_SYSTEM_PROMPT = [
   "You identify food in a photo of a meal.",
@@ -39,6 +38,7 @@ function createModel(apiKey: string, model: string, maxTokens: number, temperatu
     maxTokens,
     maxRetries: 2,
     useResponsesApi: false,
+    modelKwargs: OPENROUTER_MODEL_KWARGS,
     configuration: { baseURL: OPENROUTER_BASE_URL },
   });
 }

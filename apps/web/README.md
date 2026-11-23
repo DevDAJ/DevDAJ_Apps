@@ -125,14 +125,15 @@ Stores without credentials show as "not configured"; nothing else breaks.
 
 | Method | Path                                  | Notes                                                                |
 | ------ | ------------------------------------- | -------------------------------------------------------------------- |
-| GET    | `/api/v1/fitnexx/ai/models?provider=` | Pro; enabled models for a server provider                            |
-| POST   | `/api/v1/fitnexx/ai/chat`             | Pro; rate limited; proxied chat                                      |
+| GET    | `/api/v1/fitnexx/ai/models`           | Pro; OpenRouter model catalog (`FITNEXX_AI_MODELS`)                  |
+| POST   | `/api/v1/fitnexx/ai/chat`             | Pro; rate limited; LangChain chat over OpenRouter                    |
 | GET    | `/api/v1/fitnexx/food-analysis`       | Daily usage (guests: 0)                                              |
 | PUT    | `/api/v1/fitnexx/food-analysis`       | Reserve an image upload (signed Storage URL); full accounts only     |
-| POST   | `/api/v1/fitnexx/food-analysis`       | `{scanId}` → vision; `{requestId, detectedItems}` → nutrition lookup |
-| PATCH  | `/api/v1/fitnexx/food-analysis`       | Review labels, optional training contribution                        |
+| POST   | `/api/v1/fitnexx/food-analysis`       | `{requestId, scanId}` → full vision + nutrition pipeline, idempotent |
 | DELETE | `/api/v1/fitnexx/food-analysis`       | Delete a scan and its image                                          |
 | POST   | `/api/v1/fitnexx/webhooks/revenuecat` | Signed RevenueCat webhook                                            |
 
-Request and response bodies match the old Next.js routes in `DevDAJ/fitnexx` (`apps/web/src/app/api`),
-so only the URL changed for the mobile app.
+AI chat and the food scanner both run on LangChain over OpenRouter
+(`apps/fitnexx/lib/food-scanner/`, `lib/ai-chat.ts`). Setup and request bodies
+are documented in [`apps/fitnexx/docs/ai-setup.md`](../fitnexx/docs/ai-setup.md);
+the mobile clients are `apps/fitnexx/lib/ai.ts` and `lib/foodAnalysisQueue.ts`.

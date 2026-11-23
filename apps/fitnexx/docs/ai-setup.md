@@ -88,130 +88,98 @@ Food analysis stays available to every signed-in user, see below.
 
 ## Food photo analysis
 
-Food analysis needs USDA, Jev, and the hosted Qwen endpoint:
+Food analysis runs entirely on the API as a two-step LangChain pipeline over
+OpenRouter. It needs:
 
-- `FITNEXX_USDA_API_KEY` (FoodData Central candidate search)
-- `OPENROUTER_API_KEY` (Jev `typesafe/jev-1.13` bounded food and serving
-  choices)
-- `FITNEXX_QWEN_FOOD_API_URL` (OpenAI-compatible `/v1/chat/completions` endpoint)
-- `FITNEXX_QWEN_FOOD_API_KEY`
-- `FITNEXX_QWEN_FOOD_MODEL` (default `Qwen/Qwen3.5-4B`)
+- `OPENROUTER_API_KEY` (both pipeline steps)
+- `FITNEXX_USDA_API_KEY` (optional; FoodData Central reference search. Without
+  it the nutrition model profiles components without USDA references)
+- `FITNEXX_FOOD_VISION_MODEL` (default `google/gemini-2.5-flash`)
+- `FITNEXX_FOOD_NUTRITION_MODEL` (default `openai/gpt-4.1-mini`)
 
-The app uploads images through a short-lived Supabase Storage token. Qwen only
-describes visible food. The user reviews that structure, USDA supplies nutrient
-data, and Jev only chooses among bounded USDA or training-gate options. Images
-are never sent to Jev. Queue data stays device-local under
-`fitnexx_food_analysis_jobs` and is excluded from backups and peer sync.
+### Request flow
+
+All routes live at `/api/v1/fitnexx/food-analysis` and require a signed-in
+account (guests read usage 0 and get 403 `account_required` on the spending
+routes):
+
+1. `GET` returns `{ isPro, limit, remaining }` for the current UTC day.
+2. `PUT { contentType, byteSize }` reserves a `food_scan` row and returns
+   `{ scanId, path, token }`: a short-lived signed upload URL for the private
+   `food-scan-images` bucket. JPEG, PNG or WebP, at most 8 MB, at most 3
+   pending uploads per user.
+3. The app uploads the image directly to Supabase Storage with that token,
+   then queues `POST { requestId, scanId }`. One POST runs the whole pipeline
+   and returns the editable result. There is no separate vision or nutrition
+   call and no PATCH route.
+4. `DELETE { scanId }` removes the scan and its image.
+
+### Pipeline
+
+1. The vision model identifies each visible component and estimates its grams
+   (structured output; it describes only visible evidence, never hidden
+   ingredients).
+2. Cached profiles are looked up in the permanent `food_component` library,
+   one query per scan. Recognised foods cost no nutrition-model tokens.
+3. For uncached components the server searches USDA FoodData Central, and the
+   nutrition model writes a per-100 g profile grounded in the USDA reference
+   when one fits. Calories must match the macros; an inconsistent profile gets
+   one correction pass.
+4. New profiles are saved to `food_component` permanently and reused by every
+   later scan, for every user. Per-scan portions are saved to
+   `food_scan_component` with exact per-gram values, so editing grams in the
+   app never calls the AI again.
+
+Requests are idempotent: `claim_food_analysis_request` leases a `requestId`
+for 5 minutes and keeps completed responses for 7 days, matching the mobile
+retry window. A retried POST returns the cached result instead of paying for
+another analysis.
+
+### Allowance and queue
 
 Food analysis is available to every signed-in user, not just Pro. Free users
 get 10 remote analyses per UTC day, Pro users get 100. Only successful
-analyses count against the limit. The food migrations live in `packages/db`
-and are applied in order by `supabase db push`:
+analyses count against the limit (`consume_food_analysis_rate_limit`).
+
+The mobile queue stays device-local in AsyncStorage under
+`fitnexx_food_analysis_jobs` and is excluded from backups and peer sync. Jobs
+retry with backoff while a connection is available and fail after 7 days
+offline or repeated non-retryable errors.
+
+### Migrations and retention
+
+The food migrations live in `packages/db` and are applied in order by
+`supabase db push`:
 
 ```text
 packages/db/supabase/migrations/20260919000000_food_analysis.sql
 packages/db/supabase/migrations/20260920000000_food_model_learning.sql
+packages/db/supabase/migrations/20261123000000_food_scanner.sql
 ```
 
-The second migration creates the private image bucket, consented scan records,
-model-release records, and locks the idempotency functions to `service_role`.
-Schedule the retention cleanup at least daily in a secret-bearing job runner:
+They create the daily-limit and idempotency functions, the private image
+bucket and `food_scan` table, and the `food_component` / `food_scan_component`
+scanner tables. Pending uploads expire after 1 day; analyzed scans are kept
+(`expires_at` cleared). Schedule the retention cleanup at least daily in a
+secret-bearing job runner:
 
 ```bash
 SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... \
   python scripts/food-model/cleanup_expired.py
 ```
 
-### SovernStack Qwen deployment
-
-1. Create a SovernStack workspace with the full RTX 3090 (four 6 GB slices).
-2. Install a current vLLM release that supports Qwen3.5 vision.
-3. Set a random API key and start the OpenAI-compatible server:
-
-```bash
-vllm serve Qwen/Qwen3.5-4B \
-  --host 0.0.0.0 \
-  --port 8000 \
-  --api-key "$FITNEXX_QWEN_FOOD_API_KEY" \
-  --limit-mm-per-prompt image=1 \
-  --max-model-len 8192
-```
-
-4. Expose port 8000 through SovernStack's HTTPS endpoint. Set
-   `FITNEXX_QWEN_FOOD_API_URL=https://YOUR_ENDPOINT/v1/chat/completions` in the API server.
-5. Keep the service private to the API (`apps/web`) where SovernStack networking permits;
-   never put `FITNEXX_QWEN_FOOD_API_KEY` in the mobile environment.
-
-### Consented training with Tinker
-
-Install the current SDK and image dependency in an isolated Python environment:
-
-```bash
-uv pip install tinker tinker-cookbook pillow
-```
-
-Create an immutable dataset. This exports only `eligible`, non-withdrawn rows,
-removes EXIF by re-encoding, deduplicates normalized SHA-256 bytes, and assigns
-entire users to either train or eval:
-
-```bash
-SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... \
-  python scripts/food-model/prepare_dataset.py
-```
-
-Train a rank-16 LoRA using Tinker's supported `Qwen/Qwen3.5-4B` vision model:
-
-```bash
-TINKER_API_KEY=... python scripts/food-model/train_tinker.py \
-  food-datasets/DATASET_HASH
-```
-
-Export the resulting Tinker checkpoint as a PEFT adapter with the official
-`tinker_cookbook.weights.download` and `build_lora_adapter` APIs, then serve it
-on SovernStack:
-
-```bash
-vllm serve Qwen/Qwen3.5-4B \
-  --enable-lora \
-  --lora-modules fitnexx-food=/path/to/peft_adapter \
-  --api-key "$FITNEXX_QWEN_FOOD_API_KEY"
-```
-
-Evaluate the frozen base and candidate against the same user-separated holdout,
-then enforce promotion gates:
-
-```bash
-python scripts/food-model/evaluate_endpoint.py food-datasets/DATASET_HASH \
-  --url https://ENDPOINT/v1/chat/completions --key "$KEY" \
-  --model Qwen/Qwen3.5-4B --output baseline.json
-python scripts/food-model/evaluate_endpoint.py food-datasets/DATASET_HASH \
-  --url https://ENDPOINT/v1/chat/completions --key "$KEY" \
-  --model fitnexx-food --output candidate.json
-python scripts/food-model/promotion_gate.py baseline.json candidate.json
-SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... \
-  python scripts/food-model/release.py canary fitnexx-food-v1 \
-  --adapter-uri /models/fitnexx-food-v1 --dataset-hash DATASET_HASH \
-  --baseline baseline.json --metrics candidate.json
-```
-
-Promotion requires 98% schema validity, at least +0.02 item F1, no hallucination
-regression, and no more than 20% p95 latency regression. Deploy passing adapters
-as a canary first. Keep the prior adapter mounted until canary metrics pass, so
-rollback is only a model-name switch. The web API sends a stable 5% user cohort
-to the database release marked `canary`. Promote or roll back without an API
-deployment:
-
-```bash
-python scripts/food-model/release.py promote fitnexx-food-v1 \
-  --baseline baseline.json --metrics canary.json
-python scripts/food-model/release.py rollback PREVIOUS_VERSION
-```
+The consent/training columns on `food_scan`, the `food_model_release` table,
+and the other `scripts/food-model/` scripts (dataset export, Tinker training,
+evaluation, release) belong to a retired self-hosted Qwen design. The current
+pipeline does not use them; only `cleanup_expired.py` is still needed.
 
 ## Checks
 
+From the repo root, the full gate (lint, format, type check, tests, builds):
+
 ```bash
-bun test
-bunx tsc --noEmit -p apps/fitnexx/tsconfig.json
-vp run web#typecheck
-bun run build
+bun run ready
 ```
+
+Per workspace: `vp run fitnexx#test`, `vp run fitnexx#typecheck`,
+`vp run web#test`, `vp run web#typecheck`.

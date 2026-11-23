@@ -1,5 +1,6 @@
 import { Elysia } from "elysia";
 import { BodyTooLargeError } from "./http";
+import { reportApiError } from "./telemetry";
 
 /** An error with an HTTP status and extra JSON fields, rendered as `{ error, ...extra }`. */
 export class ApiError extends Error {
@@ -28,10 +29,17 @@ export function messageOf(error: unknown, fallback: string): string {
  */
 export const errorHandler = new Elysia({ name: "shared.errors" })
   .error({ ApiError, BodyTooLargeError })
-  .onError({ as: "global" }, ({ code, error, set }) => {
+  .onError({ as: "global" }, ({ code, error, set, request }) => {
     switch (code) {
       case "ApiError":
         set.status = error.status;
+        if (error.status >= 500) {
+          reportApiError(error, {
+            path: new URL(request.url).pathname,
+            method: request.method,
+            status: error.status,
+          });
+        }
         return { error: error.message, ...error.extra };
       case "BodyTooLargeError":
         set.status = 413;
@@ -56,9 +64,18 @@ export const errorHandler = new Elysia({ name: "shared.errors" })
       case "NOT_FOUND":
         set.status = 404;
         return { error: "Not found." };
-      default:
+      default: {
         console.error("[api] unhandled", error);
-        set.status = statusOf(error) ?? 500;
+        const status = statusOf(error) ?? 500;
+        set.status = status;
+        if (status >= 500) {
+          reportApiError(error, {
+            path: new URL(request.url).pathname,
+            method: request.method,
+            status,
+          });
+        }
         return { error: messageOf(error, "Internal server error.") };
+      }
     }
   });

@@ -1,7 +1,16 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
-import { useMemo, useState } from "react";
-import { Alert, Image, Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Alert,
+  Image,
+  Modal,
+  ScrollView,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AISettingsCard } from "../../components/settings/AISettingsCard";
 import { BugReportCard } from "../../components/settings/BugReportCard";
@@ -23,6 +32,7 @@ import { exportData, importData } from "../../lib/export";
 import { storage } from "../../lib/storage";
 import { useAppStore } from "../../lib/store";
 import { createNewSyncGroup } from "../../lib/sync";
+import { getTelemetryConsent, setTelemetryConsent } from "../../lib/telemetry";
 import { colors, spacing } from "../../lib/theme";
 import type { BodyMetrics, HabitReminder, MetricsReminder, WeightUnit } from "../../lib/types";
 
@@ -128,6 +138,16 @@ export default function SettingsScreen() {
   const [mTarget, setMTarget] = useState("");
   const [saving, setSaving] = useState(false);
   const [showSync, setShowSync] = useState(false);
+  const [errorReporting, setErrorReporting] = useState(false);
+
+  useEffect(() => {
+    void getTelemetryConsent().then(setErrorReporting);
+  }, []);
+
+  const toggleErrorReporting = (enabled: boolean) => {
+    setErrorReporting(enabled);
+    void setTelemetryConsent(enabled).catch(() => setErrorReporting(!enabled));
+  };
 
   const reminder = metricsReminder ?? DEFAULT_REMINDER;
 
@@ -868,6 +888,27 @@ export default function SettingsScreen() {
       <UsageHistory />
 
       <ProCard />
+
+      <Card>
+        <SectionLabel style={{ marginBottom: 4 }}>Privacy</SectionLabel>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 8,
+          }}
+        >
+          <Text style={{ color: colors.text, fontSize: 15, fontWeight: "600" }}>
+            Error reporting
+          </Text>
+          <Switch value={errorReporting} onValueChange={toggleErrorReporting} />
+        </View>
+        <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
+          Share anonymous crash and error details so we can fix bugs. Off by default. No usage
+          tracking, no ads.
+        </Text>
+      </Card>
 
       <BugReportCard />
 

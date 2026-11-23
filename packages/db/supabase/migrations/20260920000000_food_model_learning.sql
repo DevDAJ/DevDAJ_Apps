@@ -1,5 +1,5 @@
 -- Server-side food vision, explicit training consent, and model releases.
--- Run after 20260919_food_analysis.sql.
+-- Run after 20260919000000_food_analysis.sql.
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (

@@ -11,7 +11,8 @@ vp run web#test
 vp run web#build && bun apps/web/server.ts   # production
 ```
 
-Apply `supabase/migrations/*.sql` to the shared DevDAJ Supabase project.
+Apply the shared schema migrations from [`packages/db`](../../packages/db)
+(`supabase db push`); every DevDAJ app uses the same Supabase project.
 
 ## Pages
 
@@ -47,7 +48,6 @@ src/
       env.ts            config, app-specific vars prefixed <APP>_
       lib/              version-agnostic logic + unit tests (reused by future versions)
       v1/               Elysia controllers for v1 (+ services)
-supabase/migrations/    platform tables (dataset, contributions, store metrics)
 ```
 
 ### Adding an app API

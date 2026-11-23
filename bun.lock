@@ -142,6 +142,10 @@
         "react",
       ],
     },
+    "packages/db": {
+      "name": "@devdaj/db",
+      "version": "0.1.0",
+    },
     "packages/fitnexx-ai": {
       "name": "@fitnexx/ai",
       "version": "0.1.0",
@@ -333,6 +337,8 @@
     "@devdaj/app-data": ["@devdaj/app-data@workspace:packages/app-data"],
 
     "@devdaj/auth": ["@devdaj/auth@workspace:packages/auth"],
+
+    "@devdaj/db": ["@devdaj/db@workspace:packages/db"],
 
     "@devdaj/telemetry": ["@devdaj/telemetry@workspace:packages/telemetry"],
 

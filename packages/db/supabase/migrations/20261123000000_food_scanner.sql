@@ -1,5 +1,5 @@
 -- LangChain food scanner: reusable component nutrition profiles and per-scan portions.
--- Run after 20260920_food_model_learning.sql.
+-- Run after 20260920000000_food_model_learning.sql.
 
 alter table public.food_scan
   add column if not exists pipeline_version text;

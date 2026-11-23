@@ -1,3 +1,7 @@
+-- Shared baseline: user entitlements, interest list, and the AI rate limit.
+-- Folded from the former apps/fitnexx/supabase/init.sql so a fresh project
+-- builds from migrations alone. Idempotent: safe on an existing database.
+
 create table if not exists public.user (
   id text primary key,
   email text,

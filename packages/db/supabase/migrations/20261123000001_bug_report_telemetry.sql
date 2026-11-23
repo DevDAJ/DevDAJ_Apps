@@ -1,5 +1,5 @@
 -- Bug report correlation with PostHog error events (opt-in error reporting).
--- Run after 20260916_create_bug_report.sql.
+-- Run after 20260916000000_create_bug_report.sql.
 
 alter table public.bug_report
   add column if not exists context jsonb,

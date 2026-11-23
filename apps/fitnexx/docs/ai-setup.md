@@ -21,12 +21,18 @@ holds the accounts for every DevDAJ app. Set the project up once as described in
    neither can be farmed with throwaway guest sessions.
 
 Fitnexx stores user entitlements and interest-list signups in the Supabase
-database. Run the setup SQL before deploying:
+database. All apps share one Supabase project; the single migration history
+lives in [`packages/db`](../../../packages/db). Apply it before deploying:
 
-1. Open your Supabase project's SQL editor.
-2. Copy and paste `apps/fitnexx/supabase/init.sql`.
-3. Run it. This creates the `user` and `interest_list_entry` tables, enables
-   row-level security, and creates the `consume_ai_rate_limit` function.
+```bash
+cd packages/db
+supabase link --project-ref <your-project-ref>   # once per machine
+SUPABASE_DB_PASSWORD=<db-password> bun run db:push
+```
+
+The baseline migration creates the `user` and `interest_list_entry` tables,
+enables row-level security, and creates the `consume_ai_rate_limit` function.
+See the `packages/db` README for reconciling a database set up by hand.
 
 The server uses the `SUPABASE_SERVICE_ROLE_KEY` (service role) to bypass RLS.
 Add it to `apps/web/.env` alongside `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
@@ -100,11 +106,12 @@ are never sent to Jev. Queue data stays device-local under
 
 Food analysis is available to every signed-in user, not just Pro. Free users
 get 10 remote analyses per UTC day, Pro users get 100. Only successful
-analyses count against the limit. Run both food migrations in order:
+analyses count against the limit. The food migrations live in `packages/db`
+and are applied in order by `supabase db push`:
 
 ```text
-supabase/migrations/20260919_food_analysis.sql
-supabase/migrations/20260920_food_model_learning.sql
+packages/db/supabase/migrations/20260919000000_food_analysis.sql
+packages/db/supabase/migrations/20260920000000_food_model_learning.sql
 ```
 
 The second migration creates the private image bucket, consented scan records,

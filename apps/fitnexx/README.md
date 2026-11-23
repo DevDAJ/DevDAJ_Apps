@@ -14,11 +14,11 @@ Imported from the standalone `DevDAJ/fitnexx` repo (mobile app only). Its backen
 | `app/`                | expo-router screens                                                  |
 | `components/`, `lib/` | UI and app logic (tests live next to code as `*.test.ts`)            |
 | `android/`            | Native Android project (release builds via GitHub Actions)           |
-| `supabase/`           | Base schema (`init.sql`) and migrations                              |
 | `scripts/food-model/` | Python tooling for the food photo model (dataset, training, release) |
 | `docs/ai-setup.md`    | Supabase, RevenueCat, AI provider and food model setup               |
 
 Shared AI client: [`packages/fitnexx-ai`](../../packages/fitnexx-ai) (`@fitnexx/ai`).
+Shared schema migrations: [`packages/db`](../../packages/db) (`@devdaj/db`), one Supabase project for all apps.
 
 ## Development
 

@@ -167,18 +167,18 @@ packages/db/supabase/migrations/20261123000000_food_scanner.sql
 They create the daily-limit and idempotency functions, the private image
 bucket and `food_scan` table, and the `food_component` / `food_scan_component`
 scanner tables. Pending uploads expire after 1 day; analyzed scans are kept
-(`expires_at` cleared). Schedule the retention cleanup at least daily in a
-secret-bearing job runner:
+(`expires_at` cleared).
 
-```bash
-SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... \
-  python scripts/food-model/cleanup_expired.py
-```
+This is still a spike and the app was never published, so there is no
+scheduled retention job: expired pending uploads are not physically purged.
+They linger (and still count toward the pending-upload cap) until the user
+deletes or analyzes them. Add a retention job before publishing.
 
-The consent/training columns on `food_scan`, the `food_model_release` table,
-and the other `scripts/food-model/` scripts (dataset export, Tinker training,
-evaluation, release) belong to a retired self-hosted Qwen design. The current
-pipeline does not use them; only `cleanup_expired.py` is still needed.
+The consent/training columns on `food_scan` and the `food_model_release`
+table belong to a retired self-hosted Qwen design and are unused by the
+current pipeline; the schema is left in place. The old `scripts/food-model/`
+tooling (dataset export, Tinker training, evaluation, release and the
+expired-upload cleanup) has been removed entirely.
 
 ## Checks
 

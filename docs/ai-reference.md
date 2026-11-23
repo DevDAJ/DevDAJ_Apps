@@ -78,10 +78,10 @@ table. Verify against the code before relying on any detail here.
 - The staged hook auto-fixes formatting on commit; it does not run tests.
 - `@fitnexx/ai` and the Next.js routes in `apps/web/src/app/api` no longer
   exist; older docs or memories referencing them are stale.
-- `scripts/food-model/` training scripts (Tinker/Qwen/SovernStack) are
-  retired; only `cleanup_expired.py` is still used. `food_model_release` and
-  the consent columns on `food_scan` are legacy schema, unused by the
-  current pipeline.
+- `apps/fitnexx/scripts/food-model/` (Tinker/Qwen training tooling and the
+  expired-upload cleanup) was removed entirely; the app is an unpublished
+  spike with no retention job. `food_model_release` and the consent columns
+  on `food_scan` are legacy schema, unused by the current pipeline.
 - The Supabase CLI may not be installed locally; the live database was
   hand-applied, so first push needs `migration repair` (packages/db README).
 - No em dashes in any generated content, including docs and commit messages.

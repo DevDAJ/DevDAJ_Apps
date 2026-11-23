@@ -12,6 +12,7 @@ export function ExerciseSuggestions() {
   const workouts = useAppStore((s) => s.workouts);
   const currentGym = useAppStore((s) => s.currentGym);
   const weightUnit = useAppStore((s) => s.weightUnit);
+  const isPro = useAppStore((s) => s.isPro);
   const [suggestions, setSuggestions] = useState<ExerciseSuggestion[]>([]);
   const [aiSuggestion, setAISuggestion] = useState("");
   const [loadingAI, setLoadingAI] = useState(false);
@@ -175,20 +176,26 @@ export function ExerciseSuggestions() {
           </Text>
         </View>
       ) : null}
-      <AppButton
-        variant="secondary"
-        disabled={loadingAI}
-        onPress={askAI}
-        style={{ borderColor: colors.brand, marginTop: spacing.sm }}
-      >
-        {loadingAI ? (
-          <ActivityIndicator color={colors.brand} />
-        ) : (
-          <Text style={{ color: colors.brand, fontSize: 13, fontWeight: "700" }}>
-            Ask AI for smarter suggestions
-          </Text>
-        )}
-      </AppButton>
+      {isPro ? (
+        <AppButton
+          variant="secondary"
+          disabled={loadingAI}
+          onPress={askAI}
+          style={{ borderColor: colors.brand, marginTop: spacing.sm }}
+        >
+          {loadingAI ? (
+            <ActivityIndicator color={colors.brand} />
+          ) : (
+            <Text style={{ color: colors.brand, fontSize: 13, fontWeight: "700" }}>
+              Ask AI for smarter suggestions
+            </Text>
+          )}
+        </AppButton>
+      ) : (
+        <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: spacing.sm }}>
+          AI suggestions are a Fitnexx Pro feature.
+        </Text>
+      )}
     </Card>
   );
 }

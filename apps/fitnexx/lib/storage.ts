@@ -1,4 +1,4 @@
-import type { AISettings, UsageRecord } from "@fitnexx/ai";
+import type { AISettings, UsageRecord } from "./ai";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { KEYS } from "./backupSchema";
 import { sharedData } from "./database";
@@ -208,7 +208,19 @@ export const storage = {
 
   async getAISettings(): Promise<AISettings> {
     const raw = await AsyncStorage.getItem(KEYS.AI_SETTINGS);
-    return raw ? JSON.parse(raw) : { provider: "openai", model: "gpt-4.1-mini" };
+    const saved: unknown = raw ? JSON.parse(raw) : null;
+    // Settings saved before the OpenRouter switch hold provider-scoped model
+    // ids (no vendor prefix); reset those to the default catalog model.
+    if (
+      saved &&
+      typeof saved === "object" &&
+      "model" in saved &&
+      typeof saved.model === "string" &&
+      saved.model.includes("/")
+    ) {
+      return { model: saved.model };
+    }
+    return { model: "openai/gpt-4.1-mini" };
   },
 
   async saveAISettings(settings: AISettings): Promise<void> {

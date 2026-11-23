@@ -1,7 +1,8 @@
 # AI and Pro setup
 
-BYOK works without an account. Fitnexx Pro requires Supabase authentication,
-RevenueCat, the API (`apps/web`), and at least one server-side AI provider key.
+AI chat (exercise suggestions) is Pro-only and runs on the API. Fitnexx Pro
+requires Supabase authentication, RevenueCat, the API (`apps/web`), and an
+OpenRouter key. Food analysis is the exception: every signed-in user gets it.
 
 ## Supabase authentication
 
@@ -66,26 +67,24 @@ build; Expo Go only provides RevenueCat preview behavior.
 
 ## AI providers
 
-Set at least one key in the API deployment (`apps/web`):
+All AI chat runs on the API through LangChain and OpenRouter, the same stack
+as the food scanner. There is no bring-your-own-key mode; the app never stores
+or sends provider keys.
 
-- `OPENAI_API_KEY`
-- `ANTHROPIC_API_KEY`
-- `GOOGLE_AI_API_KEY`
-- `OPENROUTER_API_KEY`
-
-`FITNEXX_AI_MODELS` is a comma-separated allowlist of `provider:model` values.
-Only allowlisted models appear to Pro users and pass the proxy. The default is:
+1. Set `OPENROUTER_API_KEY` in the API deployment (`apps/web`).
+2. `FITNEXX_AI_MODELS` is a comma-separated allowlist of OpenRouter model ids.
+   Only allowlisted models appear to Pro users and pass the proxy. The default is:
 
 ```text
-openai:gpt-4.1-mini,anthropic:claude-sonnet-4-20250514,google:gemini-2.5-flash,openrouter:openai/gpt-4.1-mini
+openai/gpt-4.1-mini,anthropic/claude-sonnet-4,google/gemini-2.5-flash
 ```
 
 Set `EXPO_PUBLIC_API_URL` in the mobile environment to the deployed API origin.
 For local device testing, use a URL reachable from the device rather than
 `localhost`.
 
-BYOK keys never use these server variables. The app stores each key in Expo
-SecureStore and calls the selected provider directly.
+AI chat is Pro-only and rate-limited per minute (`consume_ai_rate_limit`).
+Food analysis stays available to every signed-in user, see below.
 
 ## Food photo analysis
 

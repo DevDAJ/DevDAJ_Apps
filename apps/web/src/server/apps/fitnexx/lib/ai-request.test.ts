@@ -1,44 +1,42 @@
 import { expect, test } from "vite-plus/test";
 
-import { parseServerAIRequest } from "./ai-request";
+import { aiCatalog } from "./ai-chat";
+import { parseChatRequest } from "./ai-request";
 
-const env = {
-  FITNEXX_AI_MODELS: "openai:gpt-test",
-  OPENAI_API_KEY: "secret",
-};
+const env = { FITNEXX_AI_MODELS: "openai/gpt-test,anthropic/claude-test" };
+
+test("catalog parses the allowlist and falls back to a default", () => {
+  expect(aiCatalog(env)).toEqual([
+    { id: "openai/gpt-test", name: "openai/gpt-test" },
+    { id: "anthropic/claude-test", name: "anthropic/claude-test" },
+  ]);
+  expect(aiCatalog({}).length).toBeGreaterThan(0);
+});
 
 test("accepts allowed models and caps output", () => {
   expect(
-    parseServerAIRequest(
+    parseChatRequest(
       {
-        provider: "openai",
-        model: "gpt-test",
+        model: "openai/gpt-test",
         maxTokens: 99_999,
         messages: [{ role: "user", content: "Suggest a workout" }],
       },
       env,
     ),
-  ).toMatchObject({ model: "gpt-test", maxTokens: 2_000, apiKey: "secret" });
+  ).toMatchObject({ model: "openai/gpt-test", maxTokens: 2_000 });
 });
 
-test("rejects custom URLs and unapproved models", () => {
+test("rejects unapproved models and invalid messages", () => {
   expect(() =>
-    parseServerAIRequest(
-      {
-        provider: "custom",
-        model: "anything",
-        messages: [{ role: "user", content: "Hi" }],
-      },
+    parseChatRequest(
+      { model: "openai/expensive", messages: [{ role: "user", content: "Hi" }] },
       env,
     ),
   ).toThrow();
+  expect(() => parseChatRequest({ model: "openai/gpt-test", messages: [] }, env)).toThrow();
   expect(() =>
-    parseServerAIRequest(
-      {
-        provider: "openai",
-        model: "expensive",
-        messages: [{ role: "user", content: "Hi" }],
-      },
+    parseChatRequest(
+      { model: "openai/gpt-test", messages: [{ role: "user", content: "x".repeat(8_001) }] },
       env,
     ),
   ).toThrow();

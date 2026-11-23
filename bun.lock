@@ -17,7 +17,6 @@
         "@devdaj/auth": "workspace:*",
         "@devdaj/telemetry": "workspace:*",
         "@expo/vector-icons": "^15.0.2",
-        "@fitnexx/ai": "workspace:*",
         "@react-native-async-storage/async-storage": "^2.1.0",
         "@supabase/supabase-js": "^2.116.0",
         "@tamagui/config": "1.144.4",
@@ -73,7 +72,6 @@
         "@elysia/cors": "1.4.3",
         "@elysia/eden": "1.4.10",
         "@elysia/openapi": "1.4.17",
-        "@fitnexx/ai": "workspace:*",
         "@fontsource-variable/big-shoulders-display": "^5.3.0",
         "@fontsource-variable/bricolage-grotesque": "^5.3.0",
         "@fontsource-variable/fraunces": "^5.3.0",
@@ -145,14 +143,6 @@
     "packages/db": {
       "name": "@devdaj/db",
       "version": "0.1.0",
-    },
-    "packages/fitnexx-ai": {
-      "name": "@fitnexx/ai",
-      "version": "0.1.0",
-      "devDependencies": {
-        "typescript": "^7.0.2",
-        "vite-plus": "catalog:",
-      },
     },
     "packages/telemetry": {
       "name": "@devdaj/telemetry",
@@ -423,8 +413,6 @@
     "@expo/vector-icons": ["@expo/vector-icons@15.1.1", "", { "peerDependencies": { "expo-font": ">=14.0.4", "react": "*", "react-native": "*" } }, "sha512-Iu2VkcoI5vygbtYngm7jb4ifxElNVXQYdDrYkT7UCEIiKLeWnQY0wf2ZhHZ+Wro6Sc5TaumpKUOqDRpLi5rkvw=="],
 
     "@expo/xcpretty": ["@expo/xcpretty@4.4.7", "", { "dependencies": { "@babel/code-frame": "^7.20.0", "chalk": "^4.1.0", "js-yaml": "^4.1.0" }, "bin": { "excpretty": "build/cli.js" } }, "sha512-EbxYllZ7/ozONVZd425cm4XnolfW+AmSFT5aP7Jdno6oc3WrYQcHz2CO20z/2rwWwYgztmV2PXvYH+BQ8YFjqg=="],
-
-    "@fitnexx/ai": ["@fitnexx/ai@workspace:packages/fitnexx-ai"],
 
     "@floating-ui/core": ["@floating-ui/core@1.8.0", "", { "dependencies": { "@floating-ui/utils": "^0.2.12" } }, "sha512-0CIZ5itps/8x7BG8dEIhs53BvCUH2PCoogtakwRTut+Arm58sJooJ0AuZhLw2HJYIR5cMLNPBSS728sPho2khQ=="],
 

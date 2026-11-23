@@ -25,7 +25,7 @@ import {
   SectionLabel,
 } from "../../components/shared/ui";
 import { SyncSheet } from "../../components/sync/SyncSheet";
-import { clearAIKeys } from "../../lib/ai";
+import { clearLegacyAIKeys } from "../../lib/ai";
 import { ACTIVITY_LEVELS, fmtWeight } from "../../lib/bodyMetrics";
 import { clearCache } from "../../lib/computationCache";
 import { exportData, importData } from "../../lib/export";
@@ -228,7 +228,7 @@ export default function SettingsScreen() {
           onPress: async () => {
             await AsyncStorage.clear();
             await storage.clearSharedData();
-            await clearAIKeys();
+            await clearLegacyAIKeys();
             await createNewSyncGroup();
             clearCache();
             useAppStore.getState().loadAll();

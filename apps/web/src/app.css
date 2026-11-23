@@ -1,0 +1,435 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/big-shoulders-display";
+@import "@fontsource-variable/fraunces";
+@import "@fontsource-variable/bricolage-grotesque";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-line-scarlet: var(--line-scarlet);
+  --color-line-amber: var(--line-amber);
+  --color-line-green: var(--line-green);
+  --color-line-cobalt: var(--line-cobalt);
+  --color-surface: var(--surface);
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-display);
+  --font-display: var(--display-face);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/*
+ * Site theme: a clean light product UI. The metro lines are the signature: each app owns one
+ * line ink, the shared dataset is cobalt. Every surface reads these tokens, so an app page can
+ * swap the whole world by setting [data-app] (see the app themes below).
+ */
+:root {
+  color-scheme: light;
+  --display-face: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --line-scarlet: oklch(0.6 0.2 30);
+  --line-amber: oklch(0.74 0.15 70);
+  --line-green: oklch(0.6 0.14 155);
+  --line-cobalt: oklch(0.56 0.17 262);
+  --brand: var(--line-cobalt);
+  --brand-foreground: oklch(0.99 0 0);
+
+  --background: oklch(0.985 0.002 260);
+  --surface: oklch(0.965 0.005 260);
+  --foreground: oklch(0.21 0.02 265);
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--foreground);
+  --primary: var(--foreground);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.955 0.006 260);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.955 0.006 260);
+  --muted-foreground: oklch(0.5 0.02 265);
+  --accent: oklch(0.945 0.008 260);
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(0.56 0.2 27);
+  --border: oklch(0.915 0.006 260);
+  --input: oklch(0.88 0.008 260);
+  --ring: var(--brand);
+  --chart-1: var(--line-scarlet);
+  --chart-2: var(--line-cobalt);
+  --chart-3: var(--line-amber);
+  --chart-4: var(--line-green);
+  --chart-5: var(--foreground);
+  --radius: 0.75rem;
+  --sidebar: var(--background);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--foreground);
+  --sidebar-primary-foreground: var(--background);
+  --sidebar-accent: var(--muted);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--brand);
+  --shadow-soft: 0 1px 2px oklch(0.2 0.02 265 / 5%), 0 8px 24px -12px oklch(0.2 0.02 265 / 12%);
+  --shadow-lift: 0 2px 4px oklch(0.2 0.02 265 / 6%), 0 24px 48px -24px oklch(0.2 0.02 265 / 22%);
+  --grid-dot: oklch(0.21 0.02 265 / 9%);
+
+  /* Older names, kept as aliases for the map and legacy pages. */
+  --porcelain: var(--foreground);
+  --enamel: var(--background);
+  --enamel-deep: var(--background);
+
+  /* Dashboard charts: line inks stepped for a light surface (validated, legends + tables). */
+  --series-1: oklch(0.58 0.2 30);
+  --series-2: oklch(0.55 0.17 262);
+  --series-3: oklch(0.72 0.15 70);
+  --series-4: oklch(0.6 0.14 155);
+  --outcome-approved: oklch(0.32 0.03 265);
+  --outcome-rejected: oklch(0.78 0.015 265);
+  --outcome-flagged: oklch(0.6 0.2 27);
+  --outcome-pending: oklch(0.21 0.02 265 / 45%);
+  --outcome-pending-fill: oklch(0.21 0.02 265 / 5%);
+  --chart-grid: oklch(0.21 0.02 265 / 8%);
+  --chart-axis: oklch(0.21 0.02 265 / 25%);
+  --chart-track: oklch(0.93 0.008 260);
+  --chart-muted: oklch(0.21 0.02 265 / 30%);
+
+  --tint-ok: oklch(0.6 0.14 155 / 14%);
+  --tint-warn: oklch(0.74 0.15 70 / 18%);
+  --tint-danger: oklch(0.56 0.2 27 / 12%);
+}
+
+/* ---- App worlds: each app page carries its own ground, ink and display face. ---- */
+
+/* Fitnexx: training floor at night. Charcoal, scarlet, tall athletic display type. */
+[data-app="fitnexx"] {
+  color-scheme: dark;
+  --display-face: "Big Shoulders Display Variable", "Geist Variable", sans-serif;
+  --line-scarlet: oklch(0.66 0.21 32);
+  --brand: var(--line-scarlet);
+  --brand-foreground: oklch(0.16 0.01 30);
+  --background: oklch(0.165 0.008 30);
+  --surface: oklch(0.2 0.01 30);
+  --foreground: oklch(0.97 0.006 60);
+  --card: oklch(0.21 0.011 30);
+  --popover: oklch(0.21 0.011 30);
+  --primary: var(--line-scarlet);
+  --primary-foreground: oklch(0.16 0.01 30);
+  --secondary: oklch(0.25 0.012 30);
+  --muted: oklch(0.25 0.012 30);
+  --muted-foreground: oklch(0.74 0.015 50);
+  --accent: oklch(0.27 0.014 30);
+  --border: oklch(0.97 0.006 60 / 11%);
+  --input: oklch(0.97 0.006 60 / 18%);
+  --shadow-soft: 0 1px 2px oklch(0 0 0 / 30%), 0 12px 30px -14px oklch(0 0 0 / 60%);
+  --shadow-lift: 0 2px 6px oklch(0 0 0 / 35%), 0 30px 60px -24px oklch(0 0 0 / 70%);
+  --grid-dot: oklch(0.97 0.006 60 / 7%);
+}
+
+/* Finance Tracker: the ledger. Warm graphite, amber, a bookish serif with old-style figures. */
+[data-app="finance"] {
+  color-scheme: dark;
+  --display-face: "Fraunces Variable", Georgia, serif;
+  --line-amber: oklch(0.8 0.15 75);
+  --brand: var(--line-amber);
+  --brand-foreground: oklch(0.2 0.02 70);
+  --background: oklch(0.2 0.012 70);
+  --surface: oklch(0.235 0.014 70);
+  --foreground: oklch(0.95 0.02 85);
+  --card: oklch(0.245 0.015 70);
+  --popover: oklch(0.245 0.015 70);
+  --primary: var(--line-amber);
+  --primary-foreground: oklch(0.2 0.02 70);
+  --secondary: oklch(0.28 0.016 70);
+  --muted: oklch(0.28 0.016 70);
+  --muted-foreground: oklch(0.76 0.025 80);
+  --accent: oklch(0.3 0.018 70);
+  --border: oklch(0.95 0.02 85 / 12%);
+  --input: oklch(0.95 0.02 85 / 18%);
+  --shadow-soft: 0 1px 2px oklch(0 0 0 / 30%), 0 12px 30px -14px oklch(0 0 0 / 55%);
+  --shadow-lift: 0 2px 6px oklch(0 0 0 / 35%), 0 30px 60px -24px oklch(0 0 0 / 65%);
+  --grid-dot: oklch(0.95 0.02 85 / 7%);
+}
+
+/* Pantry Helper: a home kitchen. Cream counter, tomato, basil and butter, a chunky friendly face. */
+[data-app="pantry"] {
+  color-scheme: light;
+  --display-face: "Bricolage Grotesque Variable", "Geist Variable", sans-serif;
+  --tomato: oklch(0.62 0.19 33);
+  --basil: oklch(0.52 0.13 152);
+  --butter: oklch(0.9 0.12 92);
+  --line-green: var(--basil);
+  --brand: var(--tomato);
+  --brand-foreground: oklch(0.99 0.01 95);
+  --background: oklch(0.975 0.022 90);
+  --surface: oklch(0.95 0.03 90);
+  --foreground: oklch(0.26 0.04 40);
+  --card: oklch(0.995 0.008 95);
+  --popover: oklch(0.995 0.008 95);
+  --primary: var(--tomato);
+  --primary-foreground: oklch(0.99 0.01 95);
+  --secondary: oklch(0.94 0.035 92);
+  --muted: oklch(0.94 0.035 92);
+  --muted-foreground: oklch(0.47 0.04 45);
+  --accent: oklch(0.93 0.04 92);
+  --border: oklch(0.26 0.04 40 / 13%);
+  --input: oklch(0.26 0.04 40 / 22%);
+  --radius: 1.1rem;
+  --grid-dot: oklch(0.26 0.04 40 / 9%);
+  --shadow-soft: 0 2px 0 oklch(0.26 0.04 40 / 8%), 0 10px 24px -14px oklch(0.4 0.08 40 / 30%);
+  --shadow-lift: 0 3px 0 oklch(0.26 0.04 40 / 10%), 0 24px 40px -20px oklch(0.4 0.08 40 / 35%);
+}
+
+/* Fitnexx is square-cornered: the gym floor has no rounded edges. */
+[data-app="fitnexx"] {
+  --radius: 0.125rem;
+  --grid-line: oklch(0.97 0.006 60 / 6%);
+  --grid-line-strong: oklch(0.97 0.006 60 / 11%);
+}
+
+/* Finance is a ruled ledger. */
+[data-app="finance"] {
+  --radius: 0.35rem;
+  --rule-line: oklch(0.95 0.02 85 / 7%);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    text-underline-offset: 0.2em;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    @apply bg-background text-foreground;
+    caret-color: var(--brand);
+  }
+  ::selection {
+    background: color-mix(in oklch, var(--brand) 28%, transparent);
+    color: var(--foreground);
+  }
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 3px;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Subtle dot grid behind hero panels: the paper the network map is printed on. */
+.dot-grid {
+  background-image: radial-gradient(var(--grid-dot) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* App textures: each world's own surface. */
+.grid-plate {
+  background-image:
+    linear-gradient(var(--grid-line-strong) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line-strong) 1px, transparent 1px),
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size:
+    128px 128px,
+    128px 128px,
+    32px 32px,
+    32px 32px;
+  background-position: -1px -1px;
+}
+/* Hazard tape marks anything not running yet on the Fitnexx floor. */
+.hazard {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--line-scarlet) 0 10px,
+    oklch(0.165 0.008 30) 10px 20px
+  );
+}
+/* Gingham tablecloth for the Pantry kitchen. */
+.gingham {
+  background-color: var(--card);
+  background-image:
+    linear-gradient(90deg, color-mix(in oklch, var(--tomato) 22%, transparent) 50%, transparent 50%),
+    linear-gradient(color-mix(in oklch, var(--tomato) 22%, transparent) 50%, transparent 50%);
+  background-size: 28px 28px;
+}
+/* A ruled ledger page. */
+.ledger-rule {
+  background-image: linear-gradient(var(--rule-line) 1px, transparent 1px);
+  background-size: 100% 2.75rem;
+}
+/* Steam rising from the pot on the Pantry page. */
+@keyframes steam {
+  from {
+    transform: translateY(6px) scaleY(0.9);
+    opacity: 0;
+  }
+  40% {
+    opacity: 0.7;
+  }
+  to {
+    transform: translateY(-18px) scaleY(1.1);
+    opacity: 0;
+  }
+}
+.steam {
+  animation: steam 2.8s ease-out infinite;
+  transform-box: fill-box;
+  transform-origin: bottom;
+}
+
+/* Lines draw in once; planned (dashed) lines settle in after. */
+@keyframes line-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes line-settle {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+/* App textures: each world's own surface. */
+.grid-plate {
+  background-image:
+    linear-gradient(var(--grid-line-strong) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line-strong) 1px, transparent 1px),
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size:
+    128px 128px,
+    128px 128px,
+    32px 32px,
+    32px 32px;
+  background-position: -1px -1px;
+}
+/* Hazard tape marks anything not running yet on the Fitnexx floor. */
+.hazard {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--line-scarlet) 0 10px,
+    oklch(0.165 0.008 30) 10px 20px
+  );
+}
+/* Gingham tablecloth for the Pantry kitchen. */
+.gingham {
+  background-color: var(--card);
+  background-image:
+    linear-gradient(90deg, color-mix(in oklch, var(--tomato) 22%, transparent) 50%, transparent 50%),
+    linear-gradient(color-mix(in oklch, var(--tomato) 22%, transparent) 50%, transparent 50%);
+  background-size: 28px 28px;
+}
+/* A ruled ledger page. */
+.ledger-rule {
+  background-image: linear-gradient(var(--rule-line) 1px, transparent 1px);
+  background-size: 100% 2.75rem;
+}
+/* Steam rising from the pot on the Pantry page. */
+@keyframes steam {
+  from {
+    transform: translateY(6px) scaleY(0.9);
+    opacity: 0;
+  }
+  40% {
+    opacity: 0.7;
+  }
+  to {
+    transform: translateY(-18px) scaleY(1.1);
+    opacity: 0;
+  }
+}
+.steam {
+  animation: steam 2.8s ease-out infinite;
+  transform-box: fill-box;
+  transform-origin: bottom;
+}
+
+/* Lines draw in once; planned (dashed) lines settle in after. */
+@keyframes line-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes line-settle {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.transit-solid {
+  stroke-dasharray: 1;
+  animation: line-draw 1.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.transit-planned {
+  animation: line-settle 0.9s 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .transit-solid,
+  .transit-planned,
+  .steam {
+    animation: none;
+  }
+}
+
+/* TanStack Charts (dashboard). */
+.dashboard-chart {
+  --ts-chart-tooltip-background: var(--popover);
+  --ts-chart-tooltip-color: var(--foreground);
+  --ts-chart-tooltip-border: 1px solid var(--border);
+  --ts-chart-tooltip-border-radius: 0.6rem;
+  --ts-chart-tooltip-shadow: var(--shadow-lift);
+  --ts-chart-tooltip-font: 500 12px / 1.45 "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --ts-chart-tooltip-padding: 8px 12px;
+  --ts-chart-tooltip-active-row-background: var(--muted);
+  font-variant-numeric: tabular-nums;
+}

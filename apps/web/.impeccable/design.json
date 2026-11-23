@@ -1,0 +1,821 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-20T13:08:32.728Z",
+  "title": "Design System: Apps by DevDAJ",
+  "extensions": {
+    "colorMeta": {
+      "background": {
+        "role": "neutral",
+        "displayName": "Paper White",
+        "canonical": "oklch(0.985 0.002 260)",
+        "tonalRamp": [
+          "oklch(0.15 0.002 260)",
+          "oklch(0.26 0.002 260)",
+          "oklch(0.37 0.002 260)",
+          "oklch(0.48 0.002 260)",
+          "oklch(0.59 0.002 260)",
+          "oklch(0.7 0.002 260)",
+          "oklch(0.82 0.002 260)",
+          "oklch(0.95 0.002 260)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Platform Grey",
+        "canonical": "oklch(0.965 0.005 260)",
+        "tonalRamp": [
+          "oklch(0.15 0.005 260)",
+          "oklch(0.26 0.005 260)",
+          "oklch(0.37 0.005 260)",
+          "oklch(0.48 0.005 260)",
+          "oklch(0.59 0.005 260)",
+          "oklch(0.7 0.005 260)",
+          "oklch(0.82 0.005 260)",
+          "oklch(0.95 0.005 260)"
+        ]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "Card White",
+        "canonical": "oklch(1 0 0)",
+        "tonalRamp": [
+          "oklch(0.15 0 0)",
+          "oklch(0.26 0 0)",
+          "oklch(0.37 0 0)",
+          "oklch(0.48 0 0)",
+          "oklch(0.59 0 0)",
+          "oklch(0.7 0 0)",
+          "oklch(0.82 0 0)",
+          "oklch(0.95 0 0)"
+        ]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Ink Navy",
+        "canonical": "oklch(0.21 0.02 265)",
+        "tonalRamp": [
+          "oklch(0.15 0.02 265)",
+          "oklch(0.26 0.02 265)",
+          "oklch(0.37 0.02 265)",
+          "oklch(0.48 0.02 265)",
+          "oklch(0.59 0.02 265)",
+          "oklch(0.7 0.02 265)",
+          "oklch(0.82 0.02 265)",
+          "oklch(0.95 0.02 265)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted Fill",
+        "canonical": "oklch(0.955 0.006 260)",
+        "tonalRamp": [
+          "oklch(0.15 0.006 260)",
+          "oklch(0.26 0.006 260)",
+          "oklch(0.37 0.006 260)",
+          "oklch(0.48 0.006 260)",
+          "oklch(0.59 0.006 260)",
+          "oklch(0.7 0.006 260)",
+          "oklch(0.82 0.006 260)",
+          "oklch(0.95 0.006 260)"
+        ]
+      },
+      "muted-foreground": {
+        "role": "neutral",
+        "displayName": "Timetable Grey",
+        "canonical": "oklch(0.5 0.02 265)",
+        "tonalRamp": [
+          "oklch(0.15 0.02 265)",
+          "oklch(0.26 0.02 265)",
+          "oklch(0.37 0.02 265)",
+          "oklch(0.48 0.02 265)",
+          "oklch(0.59 0.02 265)",
+          "oklch(0.7 0.02 265)",
+          "oklch(0.82 0.02 265)",
+          "oklch(0.95 0.02 265)"
+        ]
+      },
+      "accent": {
+        "role": "neutral",
+        "displayName": "Accent Fill",
+        "canonical": "oklch(0.945 0.008 260)",
+        "tonalRamp": [
+          "oklch(0.15 0.008 260)",
+          "oklch(0.26 0.008 260)",
+          "oklch(0.37 0.008 260)",
+          "oklch(0.48 0.008 260)",
+          "oklch(0.59 0.008 260)",
+          "oklch(0.7 0.008 260)",
+          "oklch(0.82 0.008 260)",
+          "oklch(0.95 0.008 260)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "oklch(0.915 0.006 260)",
+        "tonalRamp": [
+          "oklch(0.15 0.006 260)",
+          "oklch(0.26 0.006 260)",
+          "oklch(0.37 0.006 260)",
+          "oklch(0.48 0.006 260)",
+          "oklch(0.59 0.006 260)",
+          "oklch(0.7 0.006 260)",
+          "oklch(0.82 0.006 260)",
+          "oklch(0.95 0.006 260)"
+        ]
+      },
+      "input": {
+        "role": "neutral",
+        "displayName": "Input Stroke",
+        "canonical": "oklch(0.88 0.008 260)",
+        "tonalRamp": [
+          "oklch(0.15 0.008 260)",
+          "oklch(0.26 0.008 260)",
+          "oklch(0.37 0.008 260)",
+          "oklch(0.48 0.008 260)",
+          "oklch(0.59 0.008 260)",
+          "oklch(0.7 0.008 260)",
+          "oklch(0.82 0.008 260)",
+          "oklch(0.95 0.008 260)"
+        ]
+      },
+      "destructive": {
+        "role": "error",
+        "displayName": "Signal Red",
+        "canonical": "oklch(0.56 0.2 27)",
+        "tonalRamp": [
+          "oklch(0.15 0.2 27)",
+          "oklch(0.26 0.2 27)",
+          "oklch(0.37 0.2 27)",
+          "oklch(0.48 0.2 27)",
+          "oklch(0.59 0.2 27)",
+          "oklch(0.7 0.2 27)",
+          "oklch(0.82 0.2 27)",
+          "oklch(0.95 0.2 27)"
+        ]
+      },
+      "brand-foreground": {
+        "role": "neutral",
+        "displayName": "On Brand",
+        "canonical": "oklch(0.99 0 0)",
+        "tonalRamp": [
+          "oklch(0.15 0 0)",
+          "oklch(0.26 0 0)",
+          "oklch(0.37 0 0)",
+          "oklch(0.48 0 0)",
+          "oklch(0.59 0 0)",
+          "oklch(0.7 0 0)",
+          "oklch(0.82 0 0)",
+          "oklch(0.95 0 0)"
+        ]
+      },
+      "grid-dot": {
+        "role": "neutral",
+        "displayName": "Grid Dot",
+        "canonical": "oklch(0.21 0.02 265 / 9%)",
+        "note": "Translucent token; no ramp."
+      },
+      "line-scarlet": {
+        "role": "secondary",
+        "displayName": "Signal Scarlet",
+        "canonical": "oklch(0.6 0.2 30)",
+        "tonalRamp": [
+          "oklch(0.15 0.2 30)",
+          "oklch(0.26 0.2 30)",
+          "oklch(0.37 0.2 30)",
+          "oklch(0.48 0.2 30)",
+          "oklch(0.59 0.2 30)",
+          "oklch(0.7 0.2 30)",
+          "oklch(0.82 0.2 30)",
+          "oklch(0.95 0.2 30)"
+        ]
+      },
+      "line-amber": {
+        "role": "secondary",
+        "displayName": "Ledger Amber",
+        "canonical": "oklch(0.74 0.15 70)",
+        "tonalRamp": [
+          "oklch(0.15 0.15 70)",
+          "oklch(0.26 0.15 70)",
+          "oklch(0.37 0.15 70)",
+          "oklch(0.48 0.15 70)",
+          "oklch(0.59 0.15 70)",
+          "oklch(0.7 0.15 70)",
+          "oklch(0.82 0.15 70)",
+          "oklch(0.95 0.15 70)"
+        ]
+      },
+      "line-green": {
+        "role": "secondary",
+        "displayName": "Leaf Green",
+        "canonical": "oklch(0.6 0.14 155)",
+        "tonalRamp": [
+          "oklch(0.15 0.14 155)",
+          "oklch(0.26 0.14 155)",
+          "oklch(0.37 0.14 155)",
+          "oklch(0.48 0.14 155)",
+          "oklch(0.59 0.14 155)",
+          "oklch(0.7 0.14 155)",
+          "oklch(0.82 0.14 155)",
+          "oklch(0.95 0.14 155)"
+        ]
+      },
+      "line-cobalt": {
+        "role": "primary",
+        "displayName": "Dataset Cobalt",
+        "canonical": "oklch(0.56 0.17 262)",
+        "tonalRamp": [
+          "oklch(0.15 0.17 262)",
+          "oklch(0.26 0.17 262)",
+          "oklch(0.37 0.17 262)",
+          "oklch(0.48 0.17 262)",
+          "oklch(0.59 0.17 262)",
+          "oklch(0.7 0.17 262)",
+          "oklch(0.82 0.17 262)",
+          "oklch(0.95 0.17 262)"
+        ],
+        "note": "Also --brand and --ring on the suite."
+      },
+      "series-1": {
+        "role": "secondary",
+        "displayName": "Series Scarlet",
+        "canonical": "oklch(0.58 0.2 30)",
+        "tonalRamp": [
+          "oklch(0.15 0.2 30)",
+          "oklch(0.26 0.2 30)",
+          "oklch(0.37 0.2 30)",
+          "oklch(0.48 0.2 30)",
+          "oklch(0.59 0.2 30)",
+          "oklch(0.7 0.2 30)",
+          "oklch(0.82 0.2 30)",
+          "oklch(0.95 0.2 30)"
+        ]
+      },
+      "series-2": {
+        "role": "secondary",
+        "displayName": "Series Cobalt",
+        "canonical": "oklch(0.55 0.17 262)",
+        "tonalRamp": [
+          "oklch(0.15 0.17 262)",
+          "oklch(0.26 0.17 262)",
+          "oklch(0.37 0.17 262)",
+          "oklch(0.48 0.17 262)",
+          "oklch(0.59 0.17 262)",
+          "oklch(0.7 0.17 262)",
+          "oklch(0.82 0.17 262)",
+          "oklch(0.95 0.17 262)"
+        ]
+      },
+      "series-3": {
+        "role": "secondary",
+        "displayName": "Series Amber",
+        "canonical": "oklch(0.72 0.15 70)",
+        "tonalRamp": [
+          "oklch(0.15 0.15 70)",
+          "oklch(0.26 0.15 70)",
+          "oklch(0.37 0.15 70)",
+          "oklch(0.48 0.15 70)",
+          "oklch(0.59 0.15 70)",
+          "oklch(0.7 0.15 70)",
+          "oklch(0.82 0.15 70)",
+          "oklch(0.95 0.15 70)"
+        ]
+      },
+      "series-4": {
+        "role": "secondary",
+        "displayName": "Series Green",
+        "canonical": "oklch(0.6 0.14 155)",
+        "tonalRamp": [
+          "oklch(0.15 0.14 155)",
+          "oklch(0.26 0.14 155)",
+          "oklch(0.37 0.14 155)",
+          "oklch(0.48 0.14 155)",
+          "oklch(0.59 0.14 155)",
+          "oklch(0.7 0.14 155)",
+          "oklch(0.82 0.14 155)",
+          "oklch(0.95 0.14 155)"
+        ]
+      },
+      "fitnexx-ground": {
+        "role": "neutral",
+        "displayName": "Training Floor",
+        "canonical": "oklch(0.165 0.008 30)",
+        "tonalRamp": [
+          "oklch(0.15 0.008 30)",
+          "oklch(0.26 0.008 30)",
+          "oklch(0.37 0.008 30)",
+          "oklch(0.48 0.008 30)",
+          "oklch(0.59 0.008 30)",
+          "oklch(0.7 0.008 30)",
+          "oklch(0.82 0.008 30)",
+          "oklch(0.95 0.008 30)"
+        ],
+        "note": "Set under [data-app=\"fitnexx\"]."
+      },
+      "fitnexx-card": {
+        "role": "neutral",
+        "displayName": "Training Floor Raised",
+        "canonical": "oklch(0.21 0.011 30)",
+        "tonalRamp": [
+          "oklch(0.15 0.011 30)",
+          "oklch(0.26 0.011 30)",
+          "oklch(0.37 0.011 30)",
+          "oklch(0.48 0.011 30)",
+          "oklch(0.59 0.011 30)",
+          "oklch(0.7 0.011 30)",
+          "oklch(0.82 0.011 30)",
+          "oklch(0.95 0.011 30)"
+        ],
+        "note": "Set under [data-app=\"fitnexx\"]."
+      },
+      "fitnexx-text": {
+        "role": "neutral",
+        "displayName": "Chalk",
+        "canonical": "oklch(0.97 0.006 60)",
+        "tonalRamp": [
+          "oklch(0.15 0.006 60)",
+          "oklch(0.26 0.006 60)",
+          "oklch(0.37 0.006 60)",
+          "oklch(0.48 0.006 60)",
+          "oklch(0.59 0.006 60)",
+          "oklch(0.7 0.006 60)",
+          "oklch(0.82 0.006 60)",
+          "oklch(0.95 0.006 60)"
+        ],
+        "note": "Set under [data-app=\"fitnexx\"]."
+      },
+      "fitnexx-scarlet": {
+        "role": "primary",
+        "displayName": "Fitnexx Scarlet",
+        "canonical": "oklch(0.66 0.21 32)",
+        "tonalRamp": [
+          "oklch(0.15 0.21 32)",
+          "oklch(0.26 0.21 32)",
+          "oklch(0.37 0.21 32)",
+          "oklch(0.48 0.21 32)",
+          "oklch(0.59 0.21 32)",
+          "oklch(0.7 0.21 32)",
+          "oklch(0.82 0.21 32)",
+          "oklch(0.95 0.21 32)"
+        ],
+        "note": "Set under [data-app=\"fitnexx\"]."
+      },
+      "finance-ground": {
+        "role": "neutral",
+        "displayName": "Ledger Graphite",
+        "canonical": "oklch(0.2 0.012 70)",
+        "tonalRamp": [
+          "oklch(0.15 0.012 70)",
+          "oklch(0.26 0.012 70)",
+          "oklch(0.37 0.012 70)",
+          "oklch(0.48 0.012 70)",
+          "oklch(0.59 0.012 70)",
+          "oklch(0.7 0.012 70)",
+          "oklch(0.82 0.012 70)",
+          "oklch(0.95 0.012 70)"
+        ],
+        "note": "Set under [data-app=\"finance\"]."
+      },
+      "finance-card": {
+        "role": "neutral",
+        "displayName": "Ledger Graphite Raised",
+        "canonical": "oklch(0.245 0.015 70)",
+        "tonalRamp": [
+          "oklch(0.15 0.015 70)",
+          "oklch(0.26 0.015 70)",
+          "oklch(0.37 0.015 70)",
+          "oklch(0.48 0.015 70)",
+          "oklch(0.59 0.015 70)",
+          "oklch(0.7 0.015 70)",
+          "oklch(0.82 0.015 70)",
+          "oklch(0.95 0.015 70)"
+        ],
+        "note": "Set under [data-app=\"finance\"]."
+      },
+      "finance-text": {
+        "role": "neutral",
+        "displayName": "Ledger Paper",
+        "canonical": "oklch(0.95 0.02 85)",
+        "tonalRamp": [
+          "oklch(0.15 0.02 85)",
+          "oklch(0.26 0.02 85)",
+          "oklch(0.37 0.02 85)",
+          "oklch(0.48 0.02 85)",
+          "oklch(0.59 0.02 85)",
+          "oklch(0.7 0.02 85)",
+          "oklch(0.82 0.02 85)",
+          "oklch(0.95 0.02 85)"
+        ],
+        "note": "Set under [data-app=\"finance\"]."
+      },
+      "finance-amber": {
+        "role": "primary",
+        "displayName": "Finance Amber",
+        "canonical": "oklch(0.8 0.15 75)",
+        "tonalRamp": [
+          "oklch(0.15 0.15 75)",
+          "oklch(0.26 0.15 75)",
+          "oklch(0.37 0.15 75)",
+          "oklch(0.48 0.15 75)",
+          "oklch(0.59 0.15 75)",
+          "oklch(0.7 0.15 75)",
+          "oklch(0.82 0.15 75)",
+          "oklch(0.95 0.15 75)"
+        ],
+        "note": "Set under [data-app=\"finance\"]."
+      },
+      "pantry-ground": {
+        "role": "neutral",
+        "displayName": "Shelf Cream",
+        "canonical": "oklch(0.975 0.018 95)",
+        "tonalRamp": [
+          "oklch(0.15 0.018 95)",
+          "oklch(0.26 0.018 95)",
+          "oklch(0.37 0.018 95)",
+          "oklch(0.48 0.018 95)",
+          "oklch(0.59 0.018 95)",
+          "oklch(0.7 0.018 95)",
+          "oklch(0.82 0.018 95)",
+          "oklch(0.95 0.018 95)"
+        ],
+        "note": "Set under [data-app=\"pantry\"]."
+      },
+      "pantry-card": {
+        "role": "neutral",
+        "displayName": "Shelf Cream Raised",
+        "canonical": "oklch(0.99 0.01 95)",
+        "tonalRamp": [
+          "oklch(0.15 0.01 95)",
+          "oklch(0.26 0.01 95)",
+          "oklch(0.37 0.01 95)",
+          "oklch(0.48 0.01 95)",
+          "oklch(0.59 0.01 95)",
+          "oklch(0.7 0.01 95)",
+          "oklch(0.82 0.01 95)",
+          "oklch(0.95 0.01 95)"
+        ],
+        "note": "Set under [data-app=\"pantry\"]."
+      },
+      "pantry-text": {
+        "role": "neutral",
+        "displayName": "Pantry Ink",
+        "canonical": "oklch(0.24 0.035 150)",
+        "tonalRamp": [
+          "oklch(0.15 0.035 150)",
+          "oklch(0.26 0.035 150)",
+          "oklch(0.37 0.035 150)",
+          "oklch(0.48 0.035 150)",
+          "oklch(0.59 0.035 150)",
+          "oklch(0.7 0.035 150)",
+          "oklch(0.82 0.035 150)",
+          "oklch(0.95 0.035 150)"
+        ],
+        "note": "Set under [data-app=\"pantry\"]."
+      },
+      "pantry-green": {
+        "role": "primary",
+        "displayName": "Pantry Green",
+        "canonical": "oklch(0.52 0.13 152)",
+        "tonalRamp": [
+          "oklch(0.15 0.13 152)",
+          "oklch(0.26 0.13 152)",
+          "oklch(0.37 0.13 152)",
+          "oklch(0.48 0.13 152)",
+          "oklch(0.59 0.13 152)",
+          "oklch(0.7 0.13 152)",
+          "oklch(0.82 0.13 152)",
+          "oklch(0.95 0.13 152)"
+        ],
+        "note": "Set under [data-app=\"pantry\"]."
+      }
+    },
+    "cssVariables": {
+      "background": "--background",
+      "surface": "--surface",
+      "card": "--card",
+      "foreground": "--foreground",
+      "muted": "--muted",
+      "muted-foreground": "--muted-foreground",
+      "accent": "--accent",
+      "border": "--border",
+      "input": "--input",
+      "destructive": "--destructive",
+      "brand-foreground": "--brand-foreground",
+      "grid-dot": "--grid-dot",
+      "line-scarlet": "--line-scarlet",
+      "line-amber": "--line-amber",
+      "line-green": "--line-green",
+      "line-cobalt": "--line-cobalt",
+      "series-1": "--series-1",
+      "series-2": "--series-2",
+      "series-3": "--series-3",
+      "series-4": "--series-4"
+    },
+    "typographyMeta": {
+      "display-app": {
+        "displayName": "Display, app",
+        "purpose": "App name on its own page, in the world's display face."
+      },
+      "display": {
+        "displayName": "Display",
+        "purpose": "Landing headline over the map panel."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Landing section headings."
+      },
+      "headline-band": {
+        "displayName": "Headline, band",
+        "purpose": "Closing CTA band heading."
+      },
+      "headline-app": {
+        "displayName": "Headline, app",
+        "purpose": "App-page section headings in the display face."
+      },
+      "app-name": {
+        "displayName": "App Name",
+        "purpose": "App name on landing app cards, in that app's display face."
+      },
+      "page-title": {
+        "displayName": "Page Title",
+        "purpose": "Dashboard page headers."
+      },
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "Dashboard headline numbers (proportional figures)."
+      },
+      "stop-name": {
+        "displayName": "Stop Name",
+        "purpose": "Stops on the app route card."
+      },
+      "tagline": {
+        "displayName": "Tagline",
+        "purpose": "App tagline under the app display name."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Panel, highlight and dashboard section titles."
+      },
+      "title-sm": {
+        "displayName": "Title, small",
+        "purpose": "How-it-works stop titles."
+      },
+      "lede": {
+        "displayName": "Lede",
+        "purpose": "Section ledes, muted, 44-62ch."
+      },
+      "wordmark": {
+        "displayName": "Wordmark",
+        "purpose": "\"Apps\" in the site mark."
+      },
+      "transfer": {
+        "displayName": "Transfer",
+        "purpose": "What a cross-app transfer carries."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Running text."
+      },
+      "button-app": {
+        "displayName": "Button, app",
+        "purpose": "App-page download buttons."
+      },
+      "button": {
+        "displayName": "Button",
+        "purpose": "Suite pill buttons."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Nav links, card actions, captions, fields."
+      },
+      "button-sm": {
+        "displayName": "Button, small",
+        "purpose": "shadcn small buttons."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Badges, stop labels, footer legal."
+      },
+      "plate": {
+        "displayName": "Plate",
+        "purpose": "Uppercase dashboard status plates only."
+      },
+      "code": {
+        "displayName": "Code",
+        "purpose": "API tokens and request samples."
+      },
+      "chart-tooltip": {
+        "displayName": "Chart Tooltip",
+        "purpose": "TanStack Charts tooltip font."
+      },
+      "chart": {
+        "displayName": "Chart",
+        "purpose": "Axis ticks and legends."
+      }
+    },
+    "shadows": [
+      {
+        "name": "shadow-soft",
+        "value": "0 1px 2px oklch(0.2 0.02 265 / 5%), 0 8px 24px -12px oklch(0.2 0.02 265 / 12%)",
+        "purpose": "Cards, panels and primary buttons at rest."
+      },
+      {
+        "name": "shadow-lift",
+        "value": "0 2px 4px oklch(0.2 0.02 265 / 6%), 0 24px 48px -24px oklch(0.2 0.02 265 / 22%)",
+        "purpose": "Hero panels, route card, popovers, tooltips; cards on hover or when their line is lit."
+      },
+      {
+        "name": "shadow-soft (dark worlds)",
+        "value": "0 1px 2px oklch(0 0 0 / 30%), 0 12px 30px -14px oklch(0 0 0 / 60%)",
+        "purpose": "Fitnexx value; Finance uses 55%."
+      },
+      {
+        "name": "shadow-lift (dark worlds)",
+        "value": "0 2px 6px oklch(0 0 0 / 35%), 0 30px 60px -24px oklch(0 0 0 / 70%)",
+        "purpose": "Fitnexx value; Finance uses 65%."
+      },
+      {
+        "name": "badge-halo",
+        "value": "0 0 0 3px color-mix(in oklch, var(--brand) 20%, transparent)",
+        "purpose": "Halo around the running dot in service badges."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Line draw-in and settle."
+      },
+      {
+        "name": "line-draw",
+        "value": "1.4s ease-out-expo",
+        "purpose": "Solid lines draw in once on load."
+      },
+      {
+        "name": "line-settle",
+        "value": "0.9s ease-out-expo, 0.9s delay",
+        "purpose": "Planned (dashed) lines fade in after."
+      },
+      {
+        "name": "train-down",
+        "value": "3.2s cubic-bezier(0.45, 0, 0.55, 1) 0.8s infinite",
+        "purpose": "Pulse along the app's route card line while in service."
+      },
+      {
+        "name": "lift",
+        "value": "300ms transform, box-shadow",
+        "purpose": "Card hover lift and arrow nudge."
+      },
+      {
+        "name": "line-dim",
+        "value": "300ms ease-out opacity to 0.18",
+        "purpose": "Unfocused map lines dim when one is lit."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation: none",
+        "purpose": "All line and train animations stop under prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Navy pill for the main action on a section.",
+      "html": "<a class=\"ds-btn-primary\" href=\"#\">Explore the apps <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg></a>",
+      "css": ".ds-btn-primary { font-family: 'Geist Variable', ui-sans-serif, system-ui, sans-serif; display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 20px; border-radius: 9999px; background: var(--foreground, oklch(0.21 0.02 265)); color: var(--background, oklch(0.985 0.002 260)); font-size: 0.95rem; font-weight: 500; text-decoration: none; box-shadow: var(--shadow-soft, 0 1px 2px oklch(0.2 0.02 265 / 5%), 0 8px 24px -12px oklch(0.2 0.02 265 / 12%)); transition: opacity 150ms, transform 150ms; } .ds-btn-primary:hover { opacity: 0.9; } .ds-btn-primary:active { transform: translateY(1px); } .ds-btn-primary:focus-visible { outline: 2px solid var(--brand, oklch(0.56 0.17 262)); outline-offset: 3px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Card-filled pill with a hairline border for the second action.",
+      "html": "<a class=\"ds-btn-secondary\" href=\"#\">How it works</a>",
+      "css": ".ds-btn-secondary { font-family: 'Geist Variable', ui-sans-serif, system-ui, sans-serif; display: inline-flex; align-items: center; height: 44px; padding: 0 20px; border-radius: 9999px; border: 1px solid var(--border, oklch(0.915 0.006 260)); background: var(--card, #fff); color: var(--foreground, oklch(0.21 0.02 265)); font-size: 0.95rem; font-weight: 500; text-decoration: none; transition: background 150ms; } .ds-btn-secondary:hover { background: var(--muted, oklch(0.955 0.006 260)); } .ds-btn-secondary:focus-visible { outline: 2px solid var(--brand, oklch(0.56 0.17 262)); outline-offset: 3px; }"
+    },
+    {
+      "name": "App Download Button",
+      "kind": "button",
+      "refersTo": "button-app",
+      "description": "Brand-ink pill on app pages; re-colours with [data-app].",
+      "html": "<a class=\"ds-btn-app\" href=\"#\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 15V3\"/><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/><path d=\"m7 10 5 5 5-5\"/></svg> Get it on Google Play</a>",
+      "css": ".ds-btn-app { font-family: 'Geist Variable', ui-sans-serif, system-ui, sans-serif; display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 24px; border-radius: 9999px; background: var(--brand, oklch(0.56 0.17 262)); color: var(--brand-foreground, oklch(0.99 0 0)); font-size: 1rem; font-weight: 600; text-decoration: none; box-shadow: var(--shadow-soft, 0 1px 2px oklch(0.2 0.02 265 / 5%), 0 8px 24px -12px oklch(0.2 0.02 265 / 12%)); transition: opacity 150ms, transform 150ms; } .ds-btn-app:hover { opacity: 0.9; } .ds-btn-app:active { transform: translateY(1px); } .ds-btn-app:focus-visible { outline: 2px solid var(--brand, oklch(0.56 0.17 262)); outline-offset: 3px; }"
+    },
+    {
+      "name": "Navigation",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "Sticky blurred header: wordmark, pill links, sign-in pill.",
+      "html": "<header class=\"ds-nav\"><span class=\"ds-nav-mark\"><svg viewBox=\"0 0 28 28\" width=\"28\" height=\"28\" aria-hidden=\"true\"><path d=\"M3 9h7l4 5\" fill=\"none\" stroke=\"oklch(0.6 0.2 30)\" stroke-width=\"3.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M14 3v11\" fill=\"none\" stroke=\"oklch(0.56 0.17 262)\" stroke-width=\"3.2\" stroke-linecap=\"round\"/><path d=\"M25 9h-7l-4 5\" fill=\"none\" stroke=\"oklch(0.6 0.14 155)\" stroke-width=\"3.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M14 14v11\" fill=\"none\" stroke=\"oklch(0.74 0.15 70)\" stroke-width=\"3.2\" stroke-linecap=\"round\"/><circle cx=\"14\" cy=\"14\" r=\"4.2\" fill=\"oklch(0.985 0.002 260)\" stroke=\"oklch(0.21 0.02 265)\" stroke-width=\"2.4\"/></svg><b>Apps</b><small>by DevDAJ</small></span><nav><a class=\"ds-nav-link is-active\" href=\"#\">Apps</a><a class=\"ds-nav-link\" href=\"#\">Developers</a><a class=\"ds-nav-link\" href=\"#\">Contribute</a></nav><a class=\"ds-nav-signin\" href=\"#\">Sign in</a></header>",
+      "css": ".ds-nav { font-family: 'Geist Variable', ui-sans-serif, system-ui, sans-serif; display: flex; align-items: center; gap: 24px; height: 64px; padding: 0 32px; background: oklch(0.985 0.002 260 / 75%); backdrop-filter: blur(24px) saturate(1.5); border-bottom: 1px solid oklch(0.915 0.006 260 / 70%); } .ds-nav nav { display: flex; gap: 2px; } .ds-nav-mark { display: inline-flex; align-items: center; gap: 10px; color: oklch(0.21 0.02 265); } .ds-nav-mark b { font-size: 1.05rem; font-weight: 600; letter-spacing: -0.02em; } .ds-nav-mark small { font-size: 0.75rem; font-weight: 500; color: oklch(0.5 0.02 265); margin-left: -4px; } .ds-nav-link { padding: 6px 12px; border-radius: 9999px; font-size: 0.875rem; font-weight: 500; color: oklch(0.5 0.02 265); text-decoration: none; transition: background 150ms, color 150ms; } .ds-nav-link:hover { background: oklch(0.955 0.006 260); color: oklch(0.21 0.02 265); } .ds-nav-link.is-active { color: oklch(0.21 0.02 265); } .ds-nav-link:focus-visible, .ds-nav-signin:focus-visible { outline: 2px solid oklch(0.56 0.17 262); outline-offset: 3px; } .ds-nav-signin { margin-left: auto; display: inline-flex; align-items: center; height: 36px; padding: 0 16px; border-radius: 9999px; background: oklch(0.21 0.02 265); color: oklch(0.985 0.002 260); font-size: 0.875rem; font-weight: 500; text-decoration: none; } .ds-nav-signin:hover { opacity: 0.9; }"
+    },
+    {
+      "name": "Service Badge",
+      "kind": "chip",
+      "refersTo": "service-badge",
+      "description": "Line service state: solid brand dot when running, dashed when planned.",
+      "html": "<span class=\"ds-badge\"><i></i>Trial service</span> <span class=\"ds-badge ds-badge-planned\"><i></i>Under construction</span>",
+      "css": ".ds-badge { font-family: 'Geist Variable', ui-sans-serif, system-ui, sans-serif; display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 9999px; border: 1px solid var(--border, oklch(0.915 0.006 260)); background: var(--card, #fff); color: var(--foreground, oklch(0.21 0.02 265)); font-size: 0.75rem; font-weight: 500; white-space: nowrap; } .ds-badge i { width: 6px; height: 6px; border-radius: 9999px; background: var(--brand, oklch(0.56 0.17 262)); box-shadow: 0 0 0 3px color-mix(in oklch, var(--brand, oklch(0.56 0.17 262)) 20%, transparent); } .ds-badge-planned { border-style: dashed; border-color: oklch(0.21 0.02 265 / 25%); background: transparent; color: var(--muted-foreground, oklch(0.5 0.02 265)); } .ds-badge-planned i { background: none; box-shadow: none; border: 1px dashed currentColor; }"
+    },
+    {
+      "name": "Status Plate",
+      "kind": "chip",
+      "refersTo": "status-plate",
+      "description": "Dashboard review state plate (approved, rejected, flagged, waiting).",
+      "html": "<span class=\"ds-plate\">Approved</span> <span class=\"ds-plate ds-plate-flag\">Flagged</span> <span class=\"ds-plate ds-plate-wait\">Waiting</span>",
+      "css": ".ds-plate { font-family: 'Geist Variable', ui-sans-serif, system-ui, sans-serif; display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: 0.3rem; background: oklch(0.21 0.02 265); color: oklch(0.985 0.002 260); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.025em; text-transform: uppercase; } .ds-plate-flag { background: oklch(0.56 0.2 27); } .ds-plate-wait { background: transparent; color: oklch(0.21 0.02 265 / 85%); border: 1px dashed oklch(0.21 0.02 265 / 50%); }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Dashboard and form field.",
+      "html": "<input class=\"ds-input\" placeholder=\"Search gyms\" />",
+      "css": ".ds-input { font-family: 'Geist Variable', ui-sans-serif, system-ui, sans-serif; height: 40px; width: 100%; max-width: 320px; padding: 0 12px; border-radius: 0.6rem; border: 1px solid var(--input, oklch(0.88 0.008 260)); background: var(--card, #fff); color: var(--foreground, oklch(0.21 0.02 265)); font-size: 0.875rem; } .ds-input::placeholder { color: oklch(0.21 0.02 265 / 40%); } .ds-input:focus-visible { outline: 2px solid var(--brand, oklch(0.56 0.17 262)); outline-offset: 1px; }"
+    },
+    {
+      "name": "Dataset Panel",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Linked card with a 4px ink rule on top; lifts on hover.",
+      "html": "<a class=\"ds-card\" href=\"#\"><span class=\"ds-card-rule\"></span><span class=\"ds-card-icon\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><ellipse cx=\"12\" cy=\"5\" rx=\"9\" ry=\"3\"/><path d=\"M3 5v14a9 3 0 0 0 18 0V5\"/><path d=\"M3 12a9 3 0 0 0 18 0\"/></svg></span><b>Improve the gym map</b><span>Suggest a gym or fix one. A maintainer reviews every change before it goes live.</span><em>Contribute &rarr;</em></a>",
+      "css": ".ds-card { font-family: 'Geist Variable', ui-sans-serif, system-ui, sans-serif; position: relative; display: flex; flex-direction: column; gap: 16px; max-width: 420px; padding: 28px; overflow: hidden; border-radius: 1.35rem; border: 1px solid var(--border, oklch(0.915 0.006 260)); background: var(--card, #fff); color: var(--foreground, oklch(0.21 0.02 265)); text-decoration: none; box-shadow: var(--shadow-soft, 0 1px 2px oklch(0.2 0.02 265 / 5%), 0 8px 24px -12px oklch(0.2 0.02 265 / 12%)); transition: box-shadow 300ms, transform 300ms; } .ds-card:hover, .ds-card:focus-visible { box-shadow: var(--shadow-lift, 0 2px 4px oklch(0.2 0.02 265 / 6%), 0 24px 48px -24px oklch(0.2 0.02 265 / 22%)); } .ds-card:focus-visible { outline: 2px solid oklch(0.56 0.17 262); outline-offset: 3px; } .ds-card-rule { position: absolute; inset: 0 0 auto 0; height: 4px; background: oklch(0.56 0.17 262); } .ds-card-icon { display: flex; width: 44px; height: 44px; align-items: center; justify-content: center; border-radius: 1.05rem; background: oklch(0.56 0.17 262 / 10%); color: oklch(0.56 0.17 262); } .ds-card b { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.025em; } .ds-card span:not([class]) { color: oklch(0.5 0.02 265); line-height: 1.625; } .ds-card em { font-style: normal; font-size: 0.875rem; font-weight: 500; }"
+    },
+    {
+      "name": "Route Card",
+      "kind": "custom",
+      "refersTo": "hero-panel",
+      "description": "Signature: an app's line as stops on a thick ink stroke with a train pulse, on a dot-grid hero panel.",
+      "html": "<figure class=\"ds-route\"><figcaption><b>Fitnexx line</b><span>In service</span></figcaption><ol><li><i></i><b>Workouts</b><small>Stop 1</small></li><li><i></i><b>Meals</b><small>Stop 2</small></li><li class=\"ds-route-phone\"><i></i><b>Your phone</b><small>Encrypted shared folder</small></li></ol></figure>",
+      "css": ".ds-route { font-family: 'Geist Variable', ui-sans-serif, system-ui, sans-serif; position: relative; margin: 0; max-width: 380px; padding: 32px; border-radius: 1.75rem; border: 1px solid oklch(0.915 0.006 260); background-color: #fff; background-image: radial-gradient(oklch(0.21 0.02 265 / 9%) 1px, transparent 1px); background-size: 22px 22px; box-shadow: 0 2px 4px oklch(0.2 0.02 265 / 6%), 0 24px 48px -24px oklch(0.2 0.02 265 / 22%); color: oklch(0.21 0.02 265); } .ds-route figcaption { display: flex; justify-content: space-between; font-size: 0.875rem; color: oklch(0.5 0.02 265); } .ds-route figcaption b { font-weight: 500; color: oklch(0.21 0.02 265); } .ds-route ol { position: relative; list-style: none; margin: 32px 0 0; padding: 0 0 0 48px; display: flex; flex-direction: column; gap: 28px; } .ds-route ol::before { content: \"\"; position: absolute; top: 12px; bottom: 12px; left: 13px; width: 10px; border-radius: 9999px; background: oklch(0.6 0.2 30); } .ds-route li { position: relative; display: flex; flex-direction: column; } .ds-route li i { position: absolute; top: 50%; left: -48px; width: 36px; height: 36px; transform: translateY(-50%); box-sizing: border-box; border-radius: 9999px; border: 6px solid oklch(0.6 0.2 30); background: oklch(0.985 0.002 260); } .ds-route li b { font-size: 1.65rem; line-height: 1.25; font-weight: 600; } .ds-route li small { font-size: 0.875rem; color: oklch(0.5 0.02 265); } .ds-route .ds-route-phone i { left: -52px; width: 44px; height: 28px; border: 3px solid oklch(0.985 0.002 260); background: oklch(0.21 0.02 265); } .ds-route .ds-route-phone b { font-size: 1rem; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Network Map, Printed Clean",
+    "overview": "A light, familiar product site whose signature is the transit network. Each app is one coloured line; the encrypted shared folder on the phone is the interchange where every line meets. The structure is ordinary SaaS on purpose (framed hero, cards, panels, a dark closing band), and the map carries the identity: line inks, station rings, dashed planned routes, lines that draw in once.\n\nThe suite site is near-white paper, ink-navy type and Geist. Each app page is its own world: the shell sets `[data-app]` and the page swaps ground, ink and display face (Fitnexx charcoal and scarlet with Big Shoulders Display; Finance warm graphite and amber with Fraunces; Pantry cream and leaf green with Bricolage Grotesque), while keeping the shared header, footer and line motif. Surfaces sit on soft two-layer shadows; depth is gentle, never dramatic.\n\nDensity is relaxed on marketing pages (7rem section rhythm, 80rem container) and tighter on the dashboard, which reuses the same tokens, cards and chart inks.",
+    "keyCharacteristics": [
+      "Light near-white ground, ink-navy text, Geist Variable throughout the suite.",
+      "One line ink per line, carried by thick round-capped strokes and ringed stations.",
+      "Per-app worlds via `[data-app]`: own ground, brand ink and display face.",
+      "Soft two-layer shadows; 0.75rem base radius, rounded-2xl cards, 1.75rem hero panels, pill buttons.",
+      "Planned is always dashed: lines, badges, rings and empty states."
+    ],
+    "rules": [
+      {
+        "name": "The One Ink Per Line Rule",
+        "body": "Every line ink belongs to one line: scarlet Fitnexx, amber Finance, green Pantry, cobalt the dataset. Inks appear as lines, stations, series and brand, never as decoration; a new app gets a new ink.",
+        "section": "colors"
+      },
+      {
+        "name": "The Brand Follows The Page Rule",
+        "body": "UI reads `--brand`, never a fixed ink. On the suite it is cobalt; under `[data-app]` it is that app's line ink, so focus, selection, buttons and badges re-colour with the world.",
+        "section": "colors"
+      },
+      {
+        "name": "The Display Face Stays In Its World Rule",
+        "body": "`font-display` is used only for app names, app-page headings and stop names. Body, labels and the suite headline stay in Geist.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tabular Data Rule",
+        "body": "Numbers in tables, charts and stop counters use tabular figures (`.tabular`, `.dashboard-chart`); headline figures switch back to proportional.",
+        "section": "typography"
+      },
+      {
+        "name": "The Lift On Focus Rule",
+        "body": "A card rises (`-translate-y-1`, soft to lift) when hovered or when its line is focused on the map; nothing else animates elevation.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do read colour through tokens (`--brand`, `--foreground`, `LINE_INK`) so `[data-app]` can re-theme a page.",
+      "Do draw lines with round caps, 45/90 degree bends and ringed stations; dash everything planned.",
+      "Do use `--shadow-soft` at rest and `--shadow-lift` for raised or lit surfaces.",
+      "Do keep cards at `rounded-2xl`, hero panels at 1.75rem and buttons as pills.",
+      "Do label illustrative app UI or data as illustrative until real screenshots exist."
+    ],
+    "donts": [
+      "Don't use a line ink for anything that is not its line, its series or its page's brand.",
+      "Don't use gradient hero backgrounds or gradient text; gradients exist only as line dashes and the train pulse.",
+      "Don't put \"Get started\" on every CTA; name the action (\"Explore the apps\", \"Get Fitnexx\").",
+      "Don't use the app display faces outside app names, app-page headings and stops.",
+      "Don't fabricate screenshots, logos, numbers or testimonials."
+    ]
+  }
+}

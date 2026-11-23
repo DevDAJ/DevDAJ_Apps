@@ -1,0 +1,31 @@
+import { expect, test } from "vite-plus/test";
+import { createHmac } from "node:crypto";
+
+import { getRevenueCatProState, verifyRevenueCatWebhook } from "./revenuecat";
+
+test("verifies a recent RevenueCat signature", () => {
+  const body = '{"event":{"type":"TEST"}}';
+  const timestamp = 1_700_000_000;
+  const signature = createHmac("sha256", "secret").update(`${timestamp}.${body}`).digest("hex");
+  expect(
+    verifyRevenueCatWebhook(body, `t=${timestamp},v1=${signature}`, "secret", timestamp * 1_000),
+  ).toBe(true);
+  expect(
+    verifyRevenueCatWebhook(
+      body,
+      `t=${timestamp},v1=${signature}`,
+      "secret",
+      (timestamp + 301) * 1_000,
+    ),
+  ).toBe(false);
+});
+
+test("reads current entitlement state from RevenueCat", async () => {
+  const fetcher = () =>
+    Promise.resolve(
+      Response.json({
+        subscriber: { entitlements: { pro: { expires_date: null } } },
+      }),
+    );
+  expect(await getRevenueCatProState("user", "secret", "pro", fetcher)).toBe(true);
+});

@@ -1,0 +1,22 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!--
+    Only apps signed with the same key are granted this, so only DevDAJ apps can read each
+    other's data. Every DevDAJ app declares it; Android refuses to install an app that declares
+    it with a different signing key.
+  -->
+  <permission
+      android:name="tech.devdaj.permission.APP_DATA"
+      android:protectionLevel="signature" />
+  <uses-permission android:name="tech.devdaj.permission.APP_DATA" />
+
+  <application>
+    <!-- Read-only door into this app's data.db for the other DevDAJ apps. -->
+    <provider
+        android:name="tech.devdaj.appdata.AppDataProvider"
+        android:authorities="${applicationId}.appdata"
+        android:exported="true"
+        android:grantUriPermissions="false"
+        android:readPermission="tech.devdaj.permission.APP_DATA"
+        android:writePermission="tech.devdaj.permission.APP_DATA" />
+  </application>
+</manifest>

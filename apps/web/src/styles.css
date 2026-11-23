@@ -1,0 +1,314 @@
+/*
+ * Older pages (contribute, sign-in, admin) render inside <main class="page">. Everything here is
+ * scoped to .page so it never leaks into the Tailwind pages, and it reads the same tokens.
+ */
+@layer components {
+  .page {
+    padding: 2.5rem clamp(1rem, 4vw, 2rem) 5rem;
+    max-width: 72rem;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+  .page.narrow {
+    max-width: 44rem;
+  }
+  .page a {
+    color: var(--brand);
+  }
+  .page h1,
+  .page h2,
+  .page h3 {
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    font-weight: 600;
+  }
+  .page h1 {
+    font-size: clamp(1.9rem, 4vw, 2.6rem);
+    margin: 0 0 0.5rem;
+    letter-spacing: -0.03em;
+  }
+  .page h2 {
+    font-size: 1.25rem;
+    margin: 2rem 0 0.75rem;
+  }
+  .page h3 {
+    font-size: 1.05rem;
+    margin: 0;
+  }
+  .page code {
+    font-size: 0.85em;
+  }
+  .page .muted {
+    color: var(--muted-foreground);
+  }
+  .page .lede {
+    font-size: 1.125rem;
+    color: var(--muted-foreground);
+    max-width: 40rem;
+  }
+
+  .page .grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  }
+  .page .grid.two {
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  }
+  .page .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: end;
+  }
+  .page .row > label,
+  .page .row > input {
+    flex: 1 1 10rem;
+  }
+  .page .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .page .toolbar h1 {
+    margin: 0;
+  }
+  .page .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    margin-top: 1rem;
+  }
+  .page .toolbar .actions {
+    margin: 0;
+  }
+
+  .page .card {
+    display: block;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-soft);
+    padding: 1.25rem;
+    margin: 1rem 0;
+    color: inherit;
+    text-decoration: none;
+  }
+  .page .card h2 {
+    margin-top: 0;
+  }
+  .page .card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .page .badge {
+    display: inline-block;
+    padding: 0.1rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+    background: var(--muted);
+    color: var(--foreground);
+    text-transform: capitalize;
+  }
+  .page .badge.live,
+  .page .badge.approved {
+    background: var(--tint-ok);
+  }
+  .page .badge.beta,
+  .page .badge.pending {
+    background: var(--tint-warn);
+  }
+  .page .badge.rejected {
+    background: var(--tint-danger);
+    color: var(--destructive);
+  }
+
+  .page .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 2.5rem;
+    padding: 0 1.1rem;
+    border-radius: 999px;
+    border: 1px solid var(--foreground);
+    background: var(--foreground);
+    color: var(--background);
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .page .button:hover {
+    opacity: 0.88;
+  }
+  .page .button.ghost {
+    background: transparent;
+    color: var(--foreground);
+    border-color: var(--border);
+  }
+  .page .button.small {
+    height: 2rem;
+    padding: 0 0.8rem;
+    font-size: 0.85rem;
+  }
+  .page .button:disabled {
+    opacity: 0.5;
+    cursor: progress;
+  }
+  .page .link {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    color: var(--brand);
+    cursor: pointer;
+  }
+  .page .notice {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.85rem 1rem;
+  }
+  .page .notice p {
+    margin-top: 0;
+  }
+
+  .page .form {
+    display: grid;
+    gap: 1rem;
+  }
+  .page label {
+    display: grid;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+  .page input,
+  .page textarea,
+  .page select {
+    font: inherit;
+    color: var(--foreground);
+    background: var(--card);
+    border: 1px solid var(--input);
+    border-radius: 0.6rem;
+    padding: 0.55rem 0.75rem;
+    width: 100%;
+  }
+  .page select {
+    width: auto;
+  }
+  .page input:focus-visible,
+  .page textarea:focus-visible,
+  .page select:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 1px;
+  }
+
+  .page .list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .page .list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .page .checks {
+    padding-left: 1.2rem;
+  }
+  .page .checks li {
+    margin: 0.3rem 0;
+  }
+
+  .page .tabs {
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    width: fit-content;
+    border-radius: 999px;
+    background: var(--muted);
+    margin-bottom: 1.5rem;
+  }
+  .page .tabs a {
+    padding: 0.35rem 0.9rem;
+    border-radius: 999px;
+    color: var(--muted-foreground);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+  .page .tabs a[data-status="active"] {
+    color: var(--foreground);
+    background: var(--card);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .page .table-wrap {
+    overflow-x: auto;
+  }
+  .page table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .page th,
+  .page td {
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .page th {
+    color: var(--muted-foreground);
+    font-weight: 500;
+    font-size: 0.85rem;
+  }
+
+  .page .chart {
+    margin: 0;
+  }
+  .page .chart svg {
+    width: 100%;
+    height: 120px;
+    display: block;
+  }
+  .page .chart rect {
+    fill: var(--brand);
+  }
+  .page .chart figcaption {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    margin-top: 0.3rem;
+  }
+  .page .details {
+    margin: 0;
+  }
+  .page .details dt {
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+  }
+  .page .details dd {
+    margin: 0 0 0.3rem;
+    padding: 0.1rem 0.3rem;
+    border-radius: 4px;
+  }
+  .page .details dd.changed {
+    background: var(--tint-warn);
+  }
+}

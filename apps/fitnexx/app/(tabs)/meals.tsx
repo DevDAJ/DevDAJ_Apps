@@ -1,0 +1,1999 @@
+import { Ionicons } from "@expo/vector-icons";
+import { CameraView, useCameraPermissions } from "expo-camera";
+import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Alert,
+  Animated,
+  Image,
+  Modal,
+  PanResponder,
+  ScrollView,
+  type StyleProp,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  type ViewStyle,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAuth } from "../../components/auth/AuthProvider";
+import { SegmentedControl } from "../../components/shared/SegmentedControl";
+import { ScreenTitle } from "../../components/shared/ui";
+import { calcTDEE, fmtWeight } from "../../lib/bodyMetrics";
+import {
+  analyzeFoodPhotoOnServer,
+  drainFoodAnalysisQueue,
+  enqueueFoodAnalysis,
+  type FoodAnalysisUsage,
+  getFoodAnalysisJobs,
+  getFoodAnalysisUsage,
+  removeFoodAnalysisJob,
+  retryFoodAnalysisJob,
+  submitFoodReview,
+  subscribeFoodAnalysisJobs,
+} from "../../lib/foodAnalysisQueue";
+import { useAppStore } from "../../lib/store";
+import { colors, spacing } from "../../lib/theme";
+import type {
+  BodyMetrics,
+  DetectedFood,
+  FoodAnalysisJob,
+  Meal,
+  MealTemplate,
+} from "../../lib/types";
+
+function estimateTimeToTarget(meals: Meal[], metrics: BodyMetrics): string | null {
+  if (!metrics.targetWeight || metrics.targetWeight === metrics.weight) return null;
+
+  const now = Date.now();
+  const TEN_DAYS = 10 * 24 * 60 * 60 * 1000;
+  const recentMeals = meals.filter((m) => now - new Date(m.date).getTime() <= TEN_DAYS);
+
+  if (recentMeals.length < 5) return null;
+
+  const totalCals = recentMeals.reduce((a, m) => a + m.calories, 0);
+  const firstDate = new Date(recentMeals[recentMeals.length - 1].date).getTime();
+  const lastDate = new Date(recentMeals[0].date).getTime();
+  const daySpan = Math.max(1, (lastDate - firstDate) / (24 * 60 * 60 * 1000));
+  const avgDailyCals = totalCals / daySpan;
+
+  const tdee = calcTDEE(metrics);
+  const dailyDeficit = tdee - avgDailyCals;
+  const weightDiff = Math.abs(metrics.targetWeight - metrics.weight);
+  const calPerKg = 7700;
+
+  if (dailyDeficit > 0 && metrics.targetWeight < metrics.weight) {
+    const days = (weightDiff * calPerKg) / dailyDeficit;
+    return `${Math.ceil(days)} days to lose ${weightDiff.toFixed(1)}kg`;
+  }
+  if (dailyDeficit < 0 && metrics.targetWeight > metrics.weight) {
+    const days = (weightDiff * calPerKg) / Math.abs(dailyDeficit);
+    return `${Math.ceil(days)} days to gain ${weightDiff.toFixed(1)}kg`;
+  }
+
+  return null;
+}
+
+function dayKey(d: Date): string {
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+function dayLabel(d: Date): string {
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  const key = dayKey(d);
+  if (key === dayKey(today)) return "Today";
+  if (key === dayKey(yesterday)) return "Yesterday";
+  return d.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+const REVEAL_WIDTH = 88;
+const FLING_OFF = -500;
+
+function SwipeableRow({
+  onDelete,
+  onPress,
+  children,
+  style,
+}: {
+  onDelete: () => void;
+  onPress?: () => void;
+  children: ReactNode;
+  style: StyleProp<ViewStyle>;
+}) {
+  const translateX = useRef(new Animated.Value(0)).current;
+
+  const close = () => {
+    Animated.spring(translateX, {
+      toValue: 0,
+      useNativeDriver: true,
+      bounciness: 0,
+    }).start();
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponderCapture: (_e, g) =>
+        Math.abs(g.dx) > 8 && Math.abs(g.dx) > Math.abs(g.dy),
+      onPanResponderMove: (_e, g) => {
+        translateX.setValue(Math.max(FLING_OFF, Math.min(0, g.dx)));
+      },
+      onPanResponderRelease: (_e, g) => {
+        const fullSwipe = g.dx < -REVEAL_WIDTH * 1.2 || g.vx < -0.7;
+        Animated.spring(translateX, {
+          toValue: fullSwipe ? FLING_OFF : g.dx < -44 ? -REVEAL_WIDTH : 0,
+          useNativeDriver: true,
+          bounciness: 0,
+        }).start(() => {
+          if (!fullSwipe) return;
+          onDelete();
+          setTimeout(() => {
+            Animated.spring(translateX, {
+              toValue: -REVEAL_WIDTH,
+              useNativeDriver: true,
+              bounciness: 0,
+            }).start();
+          }, 300);
+        });
+      },
+    }),
+  ).current;
+
+  return (
+    <View style={{ overflow: "hidden", borderRadius: 10 }}>
+      <View
+        style={{
+          position: "absolute",
+          top: 0,
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: colors.dangerSolid,
+        }}
+      >
+        <TouchableOpacity
+          onPress={onDelete}
+          activeOpacity={0.8}
+          style={{
+            position: "absolute",
+            top: 0,
+            bottom: 0,
+            right: 0,
+            width: REVEAL_WIDTH,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Ionicons name="trash" size={22} color={colors.text} />
+          <Text
+            style={{
+              color: colors.text,
+              fontSize: 11,
+              fontWeight: "600",
+              marginTop: 2,
+            }}
+          >
+            Delete
+          </Text>
+        </TouchableOpacity>
+      </View>
+      <Animated.View {...panResponder.panHandlers} style={{ transform: [{ translateX }] }}>
+        <TouchableOpacity
+          onPress={() => {
+            close();
+            onPress?.();
+          }}
+          activeOpacity={0.7}
+          style={style}
+        >
+          {children}
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
+  );
+}
+
+export default function MealsScreen() {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const meals = useAppStore((s) => s.meals);
+  const mealTemplates = useAppStore((s) => s.mealTemplates);
+  const bodyMetrics = useAppStore((s) => s.bodyMetrics);
+  const weightUnit = useAppStore((s) => s.weightUnit);
+  const dailyCalorieGoal = useAppStore((s) => s.dailyCalorieGoal);
+  const setDailyCalorieGoal = useAppStore((s) => s.setDailyCalorieGoal);
+  const addMeal = useAppStore((s) => s.addMeal);
+  const deleteMeal = useAppStore((s) => s.deleteMeal);
+  const updateMeal = useAppStore((s) => s.updateMeal);
+  const addMealTemplate = useAppStore((s) => s.addMealTemplate);
+  const deleteMealTemplate = useAppStore((s) => s.deleteMealTemplate);
+
+  const [view, setView] = useState<"log" | "history">("log");
+
+  const [name, setName] = useState("");
+  const [calories, setCalories] = useState("");
+  const [protein, setProtein] = useState("");
+  const [carbs, setCarbs] = useState("");
+  const [fat, setFat] = useState("");
+  const [imageUri, setImageUri] = useState<string | undefined>();
+  const [servingPer100, setServingPer100] = useState<{
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+  } | null>(null);
+  const [servingG, setServingG] = useState("");
+  const [showBarcodeScan, setShowBarcodeScan] = useState(false);
+  const [camPermission, requestCamPermission] = useCameraPermissions();
+  const [scanningLock, setScanningLock] = useState(false);
+  const [editingGoal, setEditingGoal] = useState(false);
+  const [goalDraft, setGoalDraft] = useState("");
+
+  const [editMeal, setEditMeal] = useState<Meal | null>(null);
+  const [eName, setEName] = useState("");
+  const [eCals, setECals] = useState("");
+  const [eProtein, setEProtein] = useState("");
+  const [eCarbs, setECarbs] = useState("");
+  const [eFat, setEFat] = useState("");
+  const [eImageUri, setEImageUri] = useState<string | undefined>();
+  const { user, isGuest } = useAuth();
+  const [analysisJobs, setAnalysisJobs] = useState<FoodAnalysisJob[]>([]);
+  const [lastPhotoUri, setLastPhotoUri] = useState<string | null>(null);
+  const [isQueueing, setIsQueueing] = useState(false);
+  const [visionStatus, setVisionStatus] = useState<string | null>(null);
+  const [visionReview, setVisionReview] = useState<{
+    scanId: string;
+    items: DetectedFood[];
+  } | null>(null);
+  const [contributeScan, setContributeScan] = useState(false);
+  const [analysisUsage, setAnalysisUsage] = useState<FoodAnalysisUsage | null>(null);
+
+  useEffect(() => {
+    void getFoodAnalysisJobs()
+      .then(setAnalysisJobs)
+      .catch(() => undefined);
+    return subscribeFoodAnalysisJobs(() => {
+      void getFoodAnalysisJobs()
+        .then(setAnalysisJobs)
+        .catch(() => undefined);
+    });
+  }, []);
+
+  useEffect(() => {
+    // Guests have no food-analysis allowance, so there's no counter to show.
+    if (!user || isGuest) {
+      setAnalysisUsage(null);
+      return;
+    }
+    void getFoodAnalysisUsage()
+      .then(setAnalysisUsage)
+      .catch(() => undefined);
+  }, [user, isGuest]);
+
+  const latestMetrics = bodyMetrics[0] ?? null;
+  const isLbs = weightUnit === "lbs";
+
+  const timeEstimate = useMemo(
+    () => (latestMetrics ? estimateTimeToTarget(meals, latestMetrics) : null),
+    [meals, latestMetrics],
+  );
+
+  const tdee = latestMetrics ? Math.round(calcTDEE(latestMetrics)) : null;
+
+  const today = dayKey(new Date());
+  const todayMeals = useMemo(
+    () => meals.filter((m) => dayKey(new Date(m.date)) === today),
+    [meals, today],
+  );
+  const todayCals = todayMeals.reduce((a, m) => a + m.calories, 0);
+  const todayMacros = todayMeals.reduce(
+    (a, m) => ({
+      p: a.p + m.protein,
+      c: a.c + m.carbs,
+      f: a.f + m.fat,
+    }),
+    { p: 0, c: 0, f: 0 },
+  );
+
+  const groupedDays = useMemo(() => {
+    const map = new Map<string, Meal[]>();
+    for (const m of meals) {
+      const key = dayKey(new Date(m.date));
+      const list = map.get(key) ?? [];
+      list.push(m);
+      map.set(key, list);
+    }
+    return [...map.entries()]
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([key, list]) => ({
+        date: new Date(`${key}T12:00:00`),
+        meals: list,
+      }));
+  }, [meals]);
+
+  const pickImageInto = async (
+    set: (uri: string) => void,
+    onAsset?: (uri: string, width: number, height: number) => void,
+  ) => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      set(asset.uri);
+      if (onAsset && asset.width && asset.height) onAsset(asset.uri, asset.width, asset.height);
+    }
+  };
+
+  const takePhotoInto = async (
+    set: (uri: string) => void,
+    onAsset?: (uri: string, width: number, height: number) => void,
+  ) => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission needed", "Camera access is required to take photos.");
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ["images"],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      set(asset.uri);
+      if (onAsset && asset.width && asset.height) onAsset(asset.uri, asset.width, asset.height);
+    }
+  };
+
+  const rememberPhoto = (uri: string) => setLastPhotoUri(uri);
+
+  const queueDetailedAnalysis = async () => {
+    if (!lastPhotoUri) return;
+    if (!user || isGuest) {
+      Alert.alert(
+        isGuest ? "Account required" : "Sign in required",
+        isGuest
+          ? "Detailed food analysis needs a free account. Your guest data comes with you."
+          : "Sign in to request detailed analysis.",
+        [
+          { text: "Not now", style: "cancel" },
+          { text: isGuest ? "Create account" : "Sign in", onPress: () => router.push("/auth") },
+        ],
+      );
+      return;
+    }
+    setIsQueueing(true);
+    setVisionStatus("Uploading securely and checking foods...");
+    try {
+      const result = await analyzeFoodPhotoOnServer(lastPhotoUri);
+      setVisionReview(result);
+      setContributeScan(false);
+      setVisionStatus(null);
+    } catch (err) {
+      setVisionStatus(null);
+      Alert.alert("Could not queue", err instanceof Error ? err.message : "Try again.");
+    } finally {
+      setIsQueueing(false);
+    }
+  };
+
+  const updateVisionItem = (
+    index: number,
+    field: "name" | "portionDescription" | "preparation" | "portionBucket",
+    value: string,
+  ) => {
+    setVisionReview((current) =>
+      current
+        ? {
+            ...current,
+            items: current.items.map((item, itemIndex) =>
+              itemIndex === index
+                ? {
+                    ...item,
+                    [field]: field === "preparation" ? value || null : value,
+                  }
+                : item,
+            ),
+          }
+        : null,
+    );
+  };
+
+  const confirmVisionReview = async () => {
+    if (!visionReview || !user) return;
+    setIsQueueing(true);
+    try {
+      await submitFoodReview(visionReview.scanId, visionReview.items, contributeScan);
+      await enqueueFoodAnalysis(user.id, visionReview.items, visionReview.scanId);
+      await drainFoodAnalysisQueue({ ownerId: user.id });
+      setVisionReview(null);
+      setContributeScan(false);
+      void getFoodAnalysisUsage()
+        .then(setAnalysisUsage)
+        .catch(() => undefined);
+    } catch (err) {
+      Alert.alert("Could not submit review", err instanceof Error ? err.message : "Try again.");
+    } finally {
+      setIsQueueing(false);
+    }
+  };
+
+  const discardVisionReview = async () => {
+    if (!visionReview) return;
+    setIsQueueing(true);
+    try {
+      await submitFoodReview(visionReview.scanId, visionReview.items, false);
+      setVisionReview(null);
+      setContributeScan(false);
+    } catch (err) {
+      Alert.alert("Could not delete upload", err instanceof Error ? err.message : "Try again.");
+    } finally {
+      setIsQueueing(false);
+    }
+  };
+
+  const applySuggestion = async (job: FoodAnalysisJob) => {
+    if (!job.result) return;
+    const { items, totals } = job.result;
+    setName(items.map((item) => item.name).join(" + ") || name);
+    setCalories(String(totals.calories));
+    setProtein(String(totals.protein));
+    setCarbs(String(totals.carbs));
+    setFat(String(totals.fat));
+    setServingG(String(totals.grams));
+    if (totals.grams > 0) {
+      const scale = 100 / totals.grams;
+      setServingPer100({
+        calories: Math.round(totals.calories * scale),
+        protein: Math.round(totals.protein * scale),
+        carbs: Math.round(totals.carbs * scale),
+        fat: Math.round(totals.fat * scale),
+      });
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await removeFoodAnalysisJob(job.id);
+  };
+
+  const handleServingChange = (t: string) => {
+    setServingG(t);
+    if (!servingPer100) return;
+    const g = parseFloat(t);
+    if (g > 0) {
+      const scale = g / 100;
+      setCalories(String(Math.round(servingPer100.calories * scale)));
+      setProtein(String(Math.round(servingPer100.protein * scale)));
+      setCarbs(String(Math.round(servingPer100.carbs * scale)));
+      setFat(String(Math.round(servingPer100.fat * scale)));
+    } else {
+      setServingPer100(null);
+    }
+  };
+
+  const handleBarcodeScanned = async ({ data }: { data: string }) => {
+    if (scanningLock || !data) return;
+    setScanningLock(true);
+    try {
+      const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${data}.json`);
+      const json = await res.json();
+      if (json?.status !== 1 || !json.product?.product_name) {
+        Alert.alert("Not found", `No product for barcode ${data} in Open Food Facts.`);
+        return;
+      }
+      const n = json.product.nutriments ?? {};
+      const serving = json.product.serving_quantity ?? 100;
+      const per100 = {
+        calories: Math.round(n["energy-kcal_100g"] ?? 0),
+        protein: Math.round(n.proteins_100g ?? 0),
+        carbs: Math.round(n.carbohydrates_100g ?? 0),
+        fat: Math.round(n.fat_100g ?? 0),
+      };
+      const scale = serving / 100;
+      setName(json.product.product_name || `Product ${data}`);
+      setCalories(String(Math.round(per100.calories * scale)));
+      setProtein(String(Math.round(per100.protein * scale)));
+      setCarbs(String(Math.round(per100.carbs * scale)));
+      setFat(String(Math.round(per100.fat * scale)));
+      setServingPer100(per100);
+      setServingG(String(serving));
+      setShowBarcodeScan(false);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {
+      Alert.alert("Lookup failed", "Could not reach Open Food Facts.");
+    } finally {
+      setScanningLock(false);
+    }
+  };
+
+  const saveMealEntry = async () => {
+    const cals = parseInt(calories, 10) || 0;
+    if (cals <= 0) {
+      Alert.alert("Missing calories", "Enter at least calories.");
+      return;
+    }
+    const meal: Meal = {
+      id: `m_${Date.now()}`,
+      date: new Date().toISOString(),
+      name: name || `Meal ${new Date().toLocaleDateString()}`,
+      calories: cals,
+      protein: parseInt(protein, 10) || 0,
+      carbs: parseInt(carbs, 10) || 0,
+      fat: parseInt(fat, 10) || 0,
+      imageUri,
+    };
+    await addMeal(meal);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setName("");
+    setCalories("");
+    setProtein("");
+    setCarbs("");
+    setFat("");
+    setImageUri(undefined);
+    setServingPer100(null);
+    setServingG("");
+  };
+
+  const manualSet = (setter: (v: string) => void) => (v: string) => {
+    setServingPer100(null);
+    setter(v);
+  };
+
+  const saveAsTemplate = async () => {
+    const cals = parseInt(calories, 10) || 0;
+    if (cals <= 0) {
+      Alert.alert("Missing calories", "Enter at least calories.");
+      return;
+    }
+    const template: MealTemplate = {
+      id: `mt_${Date.now()}`,
+      name: name || "Untitled Meal",
+      calories: cals,
+      protein: parseInt(protein, 10) || 0,
+      carbs: parseInt(carbs, 10) || 0,
+      fat: parseInt(fat, 10) || 0,
+    };
+    await addMealTemplate(template);
+    Alert.alert("Saved", "Saved for later!");
+  };
+
+  const loadTemplate = (t: MealTemplate) => {
+    setName(t.name);
+    setCalories(String(t.calories));
+    setProtein(String(t.protein));
+    setCarbs(String(t.carbs));
+    setFat(String(t.fat));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const relogMeal = async (m: Meal) => {
+    await addMeal({
+      ...m,
+      id: `m_${Date.now()}`,
+      date: new Date().toISOString(),
+    });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const openEdit = (m: Meal) => {
+    setEName(m.name);
+    setECals(String(m.calories));
+    setEProtein(String(m.protein));
+    setECarbs(String(m.carbs));
+    setEFat(String(m.fat));
+    setEImageUri(m.imageUri);
+    setEditMeal(m);
+  };
+
+  const saveEdit = async () => {
+    if (!editMeal) return;
+    const cals = parseInt(eCals, 10) || 0;
+    if (cals <= 0) {
+      Alert.alert("Missing calories", "Enter at least calories.");
+      return;
+    }
+    await updateMeal(editMeal.id, {
+      name: eName || editMeal.name,
+      calories: cals,
+      protein: parseInt(eProtein, 10) || 0,
+      carbs: parseInt(eCarbs, 10) || 0,
+      fat: parseInt(eFat, 10) || 0,
+      imageUri: eImageUri,
+    });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setEditMeal(null);
+  };
+
+  const confirmDeleteMeal = (m: Meal) => {
+    Alert.alert("Delete meal?", m.name, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => deleteMeal(m.id),
+      },
+    ]);
+  };
+
+  const confirmDeleteTemplate = (t: MealTemplate) => {
+    Alert.alert("Delete saved meal?", t.name, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => deleteMealTemplate(t.id),
+      },
+    ]);
+  };
+
+  const saveGoal = async () => {
+    const g = parseInt(goalDraft, 10);
+    await setDailyCalorieGoal(g > 0 ? g : null);
+    setEditingGoal(false);
+  };
+
+  const progressPct = dailyCalorieGoal ? Math.min(100, (todayCals / dailyCalorieGoal) * 100) : 0;
+  const barColor =
+    !dailyCalorieGoal || todayCals <= dailyCalorieGoal
+      ? colors.success
+      : todayCals <= dailyCalorieGoal * 1.1
+        ? colors.warning
+        : colors.danger;
+
+  return (
+    <>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: colors.background }}
+        contentContainerStyle={{
+          paddingTop: insets.top + 16,
+          paddingHorizontal: spacing.screen,
+          paddingBottom: 100,
+          gap: 12,
+        }}
+      >
+        <ScreenTitle>Meals</ScreenTitle>
+
+        <SegmentedControl
+          options={[
+            { label: "Log", value: "log" },
+            { label: "History", value: "history" },
+          ]}
+          value={view}
+          onChange={setView}
+        />
+
+        {view === "log" ? (
+          <>
+            {/* Today's progress */}
+            <View
+              style={{
+                backgroundColor: colors.surface,
+                borderRadius: 14,
+                padding: 16,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    color: colors.text,
+                    fontSize: 18,
+                    fontWeight: "700",
+                  }}
+                >
+                  {todayCals}
+                  <Text
+                    style={{
+                      color: colors.textSecondary,
+                      fontSize: 14,
+                      fontWeight: "500",
+                    }}
+                  >
+                    {" "}
+                    / {dailyCalorieGoal ?? "–"} kcal
+                  </Text>
+                </Text>
+                {editingGoal ? (
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <TextInput
+                      value={goalDraft}
+                      onChangeText={setGoalDraft}
+                      keyboardType="numeric"
+                      autoFocus
+                      placeholder={tdee != null ? `e.g. ${tdee}` : "e.g. 2500"}
+                      placeholderTextColor={colors.textMuted}
+                      style={{
+                        backgroundColor: colors.surfaceRaised,
+                        borderRadius: 8,
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        color: colors.text,
+                        fontSize: 14,
+                        minWidth: 90,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        textAlign: "center",
+                      }}
+                    />
+                    <TouchableOpacity onPress={saveGoal}>
+                      <Text
+                        style={{
+                          color: colors.brand,
+                          fontSize: 13,
+                          fontWeight: "700",
+                        }}
+                      >
+                        OK
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setGoalDraft(dailyCalorieGoal ? String(dailyCalorieGoal) : "");
+                      setEditingGoal(true);
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: colors.brand,
+                        fontSize: 13,
+                        fontWeight: "700",
+                      }}
+                    >
+                      {dailyCalorieGoal ? "Edit goal" : "Set goal"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              {dailyCalorieGoal ? (
+                <>
+                  <View
+                    style={{
+                      height: 8,
+                      borderRadius: 4,
+                      backgroundColor: colors.surfacePressed,
+                      marginTop: 12,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: `${progressPct}%`,
+                        height: 8,
+                        borderRadius: 4,
+                        backgroundColor: barColor,
+                      }}
+                    />
+                  </View>
+                  <Text
+                    style={{
+                      color: colors.textSecondary,
+                      fontSize: 12,
+                      marginTop: 6,
+                    }}
+                  >
+                    Today: P{todayMacros.p}g C{todayMacros.c}g F{todayMacros.f}g
+                  </Text>
+                </>
+              ) : (
+                <Text
+                  style={{
+                    color: colors.textSecondary,
+                    fontSize: 12,
+                    marginTop: 8,
+                  }}
+                >
+                  Set a daily calorie goal to track today's progress.
+                </Text>
+              )}
+            </View>
+
+            {/* Weight snapshot */}
+            {latestMetrics ? (
+              <View
+                style={{
+                  backgroundColor: colors.surface,
+                  borderRadius: 14,
+                  padding: 16,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <View>
+                    <Text style={{ color: colors.textMuted, fontSize: 12 }}>Current</Text>
+                    <Text
+                      style={{
+                        color: colors.text,
+                        fontSize: 20,
+                        fontWeight: "700",
+                      }}
+                    >
+                      {fmtWeight(latestMetrics.weight, isLbs)}
+                    </Text>
+                  </View>
+                  {latestMetrics.targetWeight != null && (
+                    <View style={{ alignItems: "center" }}>
+                      <Text style={{ color: colors.textMuted, fontSize: 12 }}>Target</Text>
+                      <Text
+                        style={{
+                          color: colors.success,
+                          fontSize: 20,
+                          fontWeight: "700",
+                        }}
+                      >
+                        {fmtWeight(latestMetrics.targetWeight, isLbs)}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={{ alignItems: "flex-end" }}>
+                    <Text style={{ color: colors.textMuted, fontSize: 12 }}>TDEE</Text>
+                    <Text
+                      style={{
+                        color: colors.text,
+                        fontSize: 20,
+                        fontWeight: "700",
+                      }}
+                    >
+                      {tdee}
+                    </Text>
+                  </View>
+                </View>
+                {timeEstimate && (
+                  <Text
+                    style={{
+                      color: colors.brand,
+                      fontSize: 13,
+                      fontWeight: "600",
+                      marginTop: 8,
+                      textAlign: "center",
+                    }}
+                  >
+                    {timeEstimate}
+                  </Text>
+                )}
+                <TouchableOpacity
+                  onPress={() => router.navigate("/settings")}
+                  style={{ marginTop: 10, alignItems: "center" }}
+                >
+                  <Text
+                    style={{
+                      color: colors.brand,
+                      fontSize: 13,
+                      fontWeight: "600",
+                    }}
+                  >
+                    Update in Settings
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={() => router.navigate("/settings")}
+                style={{
+                  backgroundColor: colors.surface,
+                  borderRadius: 14,
+                  padding: 16,
+                  borderWidth: 1,
+                  borderColor: colors.brand,
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    color: colors.brand,
+                    fontSize: 15,
+                    fontWeight: "700",
+                  }}
+                >
+                  Set up body metrics for calorie estimates
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Meal form */}
+            <Text
+              style={{
+                color: colors.textMuted,
+                fontSize: 12,
+                fontWeight: "600",
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
+              }}
+            >
+              Log Meal
+            </Text>
+
+            <TextInput
+              placeholder="Meal name (optional)"
+              placeholderTextColor={colors.textMuted}
+              value={name}
+              onChangeText={setName}
+              style={{
+                backgroundColor: colors.surface,
+                borderRadius: 10,
+                padding: 14,
+                color: colors.text,
+                fontSize: 16,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            />
+
+            {servingPer100 && (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 13, flex: 1 }}>Serving</Text>
+                <TextInput
+                  keyboardType="decimal-pad"
+                  placeholder="0"
+                  placeholderTextColor={colors.textMuted}
+                  value={servingG}
+                  onChangeText={handleServingChange}
+                  style={{
+                    backgroundColor: colors.surface,
+                    borderRadius: 10,
+                    padding: 10,
+                    color: colors.text,
+                    fontSize: 15,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    width: 72,
+                    textAlign: "center",
+                  }}
+                />
+                <Text style={{ color: colors.textSecondary, fontSize: 13 }}>g</Text>
+              </View>
+            )}
+
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {[
+                {
+                  label: "Cal",
+                  value: calories,
+                  set: manualSet(setCalories),
+                  placeholder: "0",
+                },
+                {
+                  label: "Protein",
+                  value: protein,
+                  set: manualSet(setProtein),
+                  placeholder: "0g",
+                },
+                {
+                  label: "Carbs",
+                  value: carbs,
+                  set: manualSet(setCarbs),
+                  placeholder: "0g",
+                },
+                {
+                  label: "Fat",
+                  value: fat,
+                  set: manualSet(setFat),
+                  placeholder: "0g",
+                },
+              ].map((f) => (
+                <View key={f.label} style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      color: colors.textMuted,
+                      fontSize: 11,
+                      marginBottom: 4,
+                      textAlign: "center",
+                    }}
+                  >
+                    {f.label}
+                  </Text>
+                  <TextInput
+                    placeholder={f.placeholder}
+                    placeholderTextColor={colors.textMuted}
+                    keyboardType="numeric"
+                    value={f.value}
+                    onChangeText={f.set}
+                    style={{
+                      backgroundColor: colors.surface,
+                      borderRadius: 10,
+                      padding: 12,
+                      color: colors.text,
+                      fontSize: 16,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      textAlign: "center",
+                    }}
+                  />
+                </View>
+              ))}
+            </View>
+
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <TouchableOpacity
+                onPress={() => takePhotoInto(setImageUri, rememberPhoto)}
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.surface,
+                  borderRadius: 10,
+                  padding: 14,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    color: colors.brand,
+                    fontSize: 14,
+                    fontWeight: "600",
+                  }}
+                >
+                  {imageUri ? "Retake Photo" : "Take Photo"}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => pickImageInto(setImageUri, rememberPhoto)}
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.surface,
+                  borderRadius: 10,
+                  padding: 14,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    color: colors.brand,
+                    fontSize: 14,
+                    fontWeight: "600",
+                  }}
+                >
+                  {imageUri ? "Change Photo" : "Pick from Gallery"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => setShowBarcodeScan(true)}
+              style={{
+                backgroundColor: colors.surface,
+                borderRadius: 10,
+                padding: 14,
+                borderWidth: 1,
+                borderColor: colors.border,
+                alignItems: "center",
+              }}
+            >
+              <Text
+                style={{
+                  color: colors.success,
+                  fontSize: 14,
+                  fontWeight: "600",
+                }}
+              >
+                Scan Barcode (Open Food Facts)
+              </Text>
+            </TouchableOpacity>
+
+            {imageUri && (
+              <Image
+                source={{ uri: imageUri }}
+                style={{ width: "100%", height: 180, borderRadius: 10 }}
+                resizeMode="cover"
+              />
+            )}
+
+            {lastPhotoUri && (
+              <TouchableOpacity
+                onPress={queueDetailedAnalysis}
+                disabled={isQueueing}
+                style={{
+                  backgroundColor: colors.surface,
+                  borderRadius: 10,
+                  padding: 14,
+                  borderWidth: 1,
+                  borderColor: colors.brand,
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    color: colors.brand,
+                    fontSize: 14,
+                    fontWeight: "600",
+                  }}
+                >
+                  {isQueueing
+                    ? (visionStatus ?? "Queueing...")
+                    : "Request detailed server analysis"}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {visionStatus && !isQueueing && (
+              <Text
+                style={{
+                  color: colors.textSecondary,
+                  fontSize: 12,
+                  textAlign: "center",
+                }}
+              >
+                {visionStatus}
+              </Text>
+            )}
+
+            {visionReview && (
+              <View
+                style={{
+                  backgroundColor: colors.surface,
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  padding: 14,
+                  gap: 12,
+                }}
+              >
+                <View style={{ gap: 3 }}>
+                  <Text
+                    style={{
+                      color: colors.text,
+                      fontSize: 15,
+                      fontWeight: "700",
+                    }}
+                  >
+                    Check what Qwen found
+                  </Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                    Correct the visible foods before nutrition lookup.
+                  </Text>
+                </View>
+                {visionReview.items.map((item, index) => (
+                  <View
+                    key={`${visionReview.scanId}-${index}`}
+                    style={{ gap: 8, paddingTop: index ? 8 : 0 }}
+                  >
+                    <TextInput
+                      value={item.name}
+                      onChangeText={(value) => updateVisionItem(index, "name", value)}
+                      placeholder="Food name"
+                      placeholderTextColor={colors.textMuted}
+                      style={{
+                        color: colors.text,
+                        borderBottomWidth: 1,
+                        borderColor: colors.border,
+                        paddingVertical: 8,
+                      }}
+                    />
+                    <TextInput
+                      value={item.portionDescription}
+                      onChangeText={(value) => updateVisionItem(index, "portionDescription", value)}
+                      placeholder="Visible portion"
+                      placeholderTextColor={colors.textMuted}
+                      style={{
+                        color: colors.text,
+                        borderBottomWidth: 1,
+                        borderColor: colors.border,
+                        paddingVertical: 8,
+                      }}
+                    />
+                    <TextInput
+                      value={item.preparation ?? ""}
+                      onChangeText={(value) => updateVisionItem(index, "preparation", value)}
+                      placeholder="Preparation, optional"
+                      placeholderTextColor={colors.textMuted}
+                      style={{
+                        color: colors.text,
+                        borderBottomWidth: 1,
+                        borderColor: colors.border,
+                        paddingVertical: 8,
+                      }}
+                    />
+                    <View style={{ flexDirection: "row", gap: 6 }}>
+                      {(["small", "typical", "large", "unknown"] as const).map((bucket) => (
+                        <TouchableOpacity
+                          key={bucket}
+                          onPress={() => updateVisionItem(index, "portionBucket", bucket)}
+                          style={{
+                            flex: 1,
+                            borderRadius: 7,
+                            paddingVertical: 7,
+                            alignItems: "center",
+                            backgroundColor:
+                              item.portionBucket === bucket ? colors.brand : colors.background,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color:
+                                item.portionBucket === bucket
+                                  ? colors.onBrand
+                                  : colors.textSecondary,
+                              fontSize: 10,
+                              textTransform: "capitalize",
+                            }}
+                          >
+                            {bucket}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                ))}
+                <TouchableOpacity
+                  onPress={() => setContributeScan((value) => !value)}
+                  style={{
+                    flexDirection: "row",
+                    gap: 10,
+                    alignItems: "center",
+                  }}
+                >
+                  <Ionicons
+                    name={contributeScan ? "checkbox" : "square-outline"}
+                    size={22}
+                    color={contributeScan ? colors.brand : colors.textMuted}
+                  />
+                  <Text
+                    style={{
+                      color: colors.textSecondary,
+                      fontSize: 12,
+                      flex: 1,
+                    }}
+                  >
+                    Keep this image and my corrections to improve the food model. This is optional
+                    and off by default.
+                  </Text>
+                </TouchableOpacity>
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <TouchableOpacity
+                    onPress={() => void discardVisionReview()}
+                    disabled={isQueueing}
+                    style={{ padding: 12, alignItems: "center" }}
+                  >
+                    <Text style={{ color: colors.danger, fontWeight: "600" }}>Delete upload</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => void confirmVisionReview()}
+                    disabled={isQueueing}
+                    style={{
+                      flex: 1,
+                      backgroundColor: colors.brand,
+                      borderRadius: 8,
+                      padding: 12,
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text style={{ color: colors.onBrand, fontWeight: "700" }}>
+                      {isQueueing ? "Submitting..." : "Use reviewed foods"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {analysisUsage && (
+              <Text
+                style={{
+                  color: colors.textSecondary,
+                  fontSize: 12,
+                  textAlign: "center",
+                }}
+              >
+                {analysisUsage.isPro
+                  ? `Pro: ${analysisUsage.remaining} of ${analysisUsage.limit} analyses left today`
+                  : `Free: ${analysisUsage.remaining} of ${analysisUsage.limit} analyses left today`}
+              </Text>
+            )}
+
+            {analysisJobs.length > 0 && (
+              <View style={{ gap: 8 }}>
+                <Text
+                  style={{
+                    color: colors.textMuted,
+                    fontSize: 12,
+                    fontWeight: "600",
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  Food Analysis
+                </Text>
+                {analysisJobs.map((job) => (
+                  <View
+                    key={job.id}
+                    style={{
+                      backgroundColor: colors.surface,
+                      borderRadius: 10,
+                      padding: 14,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      gap: 6,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: colors.text,
+                        fontSize: 14,
+                        fontWeight: "600",
+                      }}
+                    >
+                      {job.request.detectedItems.map((item) => item.name).join(" + ")}
+                    </Text>
+                    {job.status === "ready" && job.result ? (
+                      <>
+                        <Text
+                          style={{
+                            color: colors.textSecondary,
+                            fontSize: 12,
+                          }}
+                        >
+                          {job.result.totals.grams}g | {job.result.totals.calories} cal | P
+                          {job.result.totals.protein} C{job.result.totals.carbs} F
+                          {job.result.totals.fat} (estimate, edit before saving)
+                        </Text>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            gap: 8,
+                            marginTop: 4,
+                          }}
+                        >
+                          <TouchableOpacity
+                            onPress={() => void applySuggestion(job)}
+                            style={{
+                              flex: 1,
+                              backgroundColor: colors.brand,
+                              borderRadius: 8,
+                              padding: 10,
+                              alignItems: "center",
+                            }}
+                          >
+                            <Text
+                              style={{
+                                color: colors.onBrand,
+                                fontSize: 13,
+                                fontWeight: "700",
+                              }}
+                            >
+                              Apply
+                            </Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => void removeFoodAnalysisJob(job.id)}
+                            style={{
+                              padding: 10,
+                              alignItems: "center",
+                            }}
+                          >
+                            <Text
+                              style={{
+                                color: colors.danger,
+                                fontSize: 13,
+                                fontWeight: "600",
+                              }}
+                            >
+                              Delete
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      </>
+                    ) : job.status === "failed" ? (
+                      <>
+                        <Text
+                          style={{
+                            color: colors.danger,
+                            fontSize: 12,
+                          }}
+                        >
+                          {job.lastError ?? "Analysis failed."}
+                        </Text>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            gap: 8,
+                            marginTop: 4,
+                          }}
+                        >
+                          <TouchableOpacity
+                            onPress={() => void retryFoodAnalysisJob(job.id)}
+                            style={{
+                              flex: 1,
+                              borderRadius: 8,
+                              padding: 10,
+                              alignItems: "center",
+                              borderWidth: 1,
+                              borderColor: colors.brand,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                color: colors.brand,
+                                fontSize: 13,
+                                fontWeight: "700",
+                              }}
+                            >
+                              Retry
+                            </Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => void removeFoodAnalysisJob(job.id)}
+                            style={{
+                              padding: 10,
+                              alignItems: "center",
+                            }}
+                          >
+                            <Text
+                              style={{
+                                color: colors.danger,
+                                fontSize: 13,
+                                fontWeight: "600",
+                              }}
+                            >
+                              Delete
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      </>
+                    ) : (
+                      <Text
+                        style={{
+                          color: colors.textSecondary,
+                          fontSize: 12,
+                        }}
+                      >
+                        {job.lastError
+                          ? `Retrying (${job.lastError})`
+                          : "Queued. Runs when you are back online."}
+                      </Text>
+                    )}
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <TouchableOpacity
+                onPress={saveMealEntry}
+                style={{
+                  flex: 2,
+                  backgroundColor: colors.success,
+                  borderRadius: 14,
+                  padding: 16,
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    color: colors.onBrand,
+                    fontSize: 16,
+                    fontWeight: "800",
+                  }}
+                >
+                  Save Meal
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={saveAsTemplate}
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.surface,
+                  borderRadius: 14,
+                  padding: 16,
+                  borderWidth: 1,
+                  borderColor: colors.warning,
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    color: colors.warning,
+                    fontSize: 14,
+                    fontWeight: "700",
+                  }}
+                >
+                  Save for later
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Saved Meals */}
+            {mealTemplates.length > 0 && (
+              <>
+                <Text
+                  style={{
+                    color: colors.textMuted,
+                    fontSize: 12,
+                    fontWeight: "600",
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                    marginTop: 4,
+                  }}
+                >
+                  Saved Meals
+                </Text>
+                <Text
+                  style={{
+                    color: colors.textSecondary,
+                    fontSize: 12,
+                    marginBottom: 6,
+                  }}
+                >
+                  Swipe left to reveal Delete; swipe all the way to delete.
+                </Text>
+                {mealTemplates.map((t) => (
+                  <SwipeableRow
+                    key={t.id}
+                    onDelete={() => confirmDeleteTemplate(t)}
+                    onPress={() => loadTemplate(t)}
+                    style={{
+                      backgroundColor: colors.surface,
+                      borderRadius: 10,
+                      padding: 14,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <View>
+                      <Text
+                        style={{
+                          color: colors.text,
+                          fontSize: 15,
+                          fontWeight: "600",
+                        }}
+                      >
+                        {t.name}
+                      </Text>
+                      <Text
+                        style={{
+                          color: colors.textSecondary,
+                          fontSize: 12,
+                          marginTop: 2,
+                        }}
+                      >
+                        {t.calories} cal | P{t.protein} C{t.carbs} F{t.fat}
+                      </Text>
+                    </View>
+                    <Text style={{ color: colors.brand, fontSize: 12 }}>Use</Text>
+                  </SwipeableRow>
+                ))}
+              </>
+            )}
+
+            {/* Meal history */}
+          </>
+        ) : (
+          groupedDays.length > 0 && (
+            <>
+              <Text
+                style={{
+                  color: colors.textMuted,
+                  fontSize: 12,
+                  fontWeight: "600",
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                  marginTop: 4,
+                }}
+              >
+                History
+              </Text>
+              <Text
+                style={{
+                  color: colors.textSecondary,
+                  fontSize: 12,
+                  marginBottom: 6,
+                }}
+              >
+                Swipe left to reveal Delete; swipe all the way to delete.
+              </Text>
+              {groupedDays.map((day) => (
+                <View key={dayKey(day.date)}>
+                  <Text
+                    style={{
+                      color: colors.textSecondary,
+                      fontSize: 13,
+                      fontWeight: "700",
+                      marginBottom: 6,
+                      marginTop: 4,
+                    }}
+                  >
+                    {dayLabel(day.date)}
+                  </Text>
+                  <View style={{ gap: 6 }}>
+                    {day.meals.map((m) => (
+                      <SwipeableRow
+                        key={m.id}
+                        onDelete={() => confirmDeleteMeal(m)}
+                        onPress={() => openEdit(m)}
+                        style={{
+                          backgroundColor: colors.surface,
+                          borderRadius: 10,
+                          padding: 12,
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                          flexDirection: "row",
+                          gap: 12,
+                          alignItems: "center",
+                        }}
+                      >
+                        {m.imageUri ? (
+                          <Image
+                            source={{ uri: m.imageUri }}
+                            style={{ width: 40, height: 40, borderRadius: 8 }}
+                          />
+                        ) : (
+                          <View
+                            style={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: 8,
+                              backgroundColor: colors.surfaceRaised,
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            <Text style={{ color: colors.textMuted, fontSize: 16 }}>+</Text>
+                          </View>
+                        )}
+                        <View style={{ flex: 1 }}>
+                          <Text
+                            style={{
+                              color: colors.text,
+                              fontSize: 14,
+                              fontWeight: "600",
+                            }}
+                          >
+                            {m.name}
+                          </Text>
+                          <Text
+                            style={{
+                              color: colors.textSecondary,
+                              fontSize: 12,
+                            }}
+                          >
+                            P{m.protein}g C{m.carbs}g F{m.fat}g
+                          </Text>
+                        </View>
+                        <View style={{ alignItems: "flex-end" }}>
+                          <Text
+                            style={{
+                              color: colors.text,
+                              fontSize: 16,
+                              fontWeight: "700",
+                            }}
+                          >
+                            {m.calories}
+                          </Text>
+                          <Text
+                            style={{
+                              color: colors.brand,
+                              fontSize: 11,
+                              fontWeight: "600",
+                            }}
+                          >
+                            tap to edit
+                          </Text>
+                        </View>
+                      </SwipeableRow>
+                    ))}
+                  </View>
+                </View>
+              ))}
+            </>
+          )
+        )}
+      </ScrollView>
+
+      <Modal
+        visible={editMeal != null}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setEditMeal(null)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: colors.overlay,
+            justifyContent: "flex-end",
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: colors.surfaceRaised,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              padding: 20,
+              paddingBottom: insets.bottom + 20,
+              gap: 12,
+            }}
+          >
+            <Text style={{ color: colors.text, fontSize: 20, fontWeight: "800" }}>Edit Meal</Text>
+
+            <TextInput
+              placeholder="Meal name"
+              placeholderTextColor={colors.textMuted}
+              value={eName}
+              onChangeText={setEName}
+              style={{
+                backgroundColor: colors.surface,
+                borderRadius: 10,
+                padding: 14,
+                color: colors.text,
+                fontSize: 16,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            />
+
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {[
+                { label: "Cal", value: eCals, set: setECals, placeholder: "0" },
+                {
+                  label: "Protein",
+                  value: eProtein,
+                  set: setEProtein,
+                  placeholder: "0g",
+                },
+                {
+                  label: "Carbs",
+                  value: eCarbs,
+                  set: setECarbs,
+                  placeholder: "0g",
+                },
+                {
+                  label: "Fat",
+                  value: eFat,
+                  set: setEFat,
+                  placeholder: "0g",
+                },
+              ].map((f) => (
+                <View key={f.label} style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      color: colors.textMuted,
+                      fontSize: 11,
+                      marginBottom: 4,
+                      textAlign: "center",
+                    }}
+                  >
+                    {f.label}
+                  </Text>
+                  <TextInput
+                    placeholder={f.placeholder}
+                    placeholderTextColor={colors.textMuted}
+                    keyboardType="numeric"
+                    value={f.value}
+                    onChangeText={f.set}
+                    style={{
+                      backgroundColor: colors.surface,
+                      borderRadius: 10,
+                      padding: 12,
+                      color: colors.text,
+                      fontSize: 16,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      textAlign: "center",
+                    }}
+                  />
+                </View>
+              ))}
+            </View>
+
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <TouchableOpacity
+                onPress={() => takePhotoInto(setEImageUri)}
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.surface,
+                  borderRadius: 10,
+                  padding: 14,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    color: colors.brand,
+                    fontSize: 14,
+                    fontWeight: "600",
+                  }}
+                >
+                  {eImageUri ? "Retake Photo" : "Take Photo"}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => pickImageInto(setEImageUri)}
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.surface,
+                  borderRadius: 10,
+                  padding: 14,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    color: colors.brand,
+                    fontSize: 14,
+                    fontWeight: "600",
+                  }}
+                >
+                  {eImageUri ? "Change Photo" : "Pick from Gallery"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {eImageUri && (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <Image
+                  source={{ uri: eImageUri }}
+                  style={{ width: 56, height: 56, borderRadius: 8 }}
+                  resizeMode="cover"
+                />
+                <TouchableOpacity onPress={() => setEImageUri(undefined)}>
+                  <Text
+                    style={{
+                      color: colors.danger,
+                      fontSize: 14,
+                      fontWeight: "600",
+                    }}
+                  >
+                    Remove photo
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
+              <TouchableOpacity
+                onPress={() => {
+                  if (editMeal) relogMeal(editMeal);
+                  setEditMeal(null);
+                }}
+                disabled={!editMeal}
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.surface,
+                  borderRadius: 14,
+                  padding: 16,
+                  alignItems: "center",
+                  borderWidth: 1,
+                  borderColor: colors.warning,
+                }}
+              >
+                <Text
+                  style={{
+                    color: colors.warning,
+                    fontSize: 14,
+                    fontWeight: "700",
+                  }}
+                >
+                  Re-log today
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={saveEdit}
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.brand,
+                  borderRadius: 14,
+                  padding: 16,
+                  alignItems: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    color: colors.onBrand,
+                    fontSize: 16,
+                    fontWeight: "800",
+                  }}
+                >
+                  Save
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Barcode scanner */}
+      <Modal
+        visible={showBarcodeScan}
+        animationType="slide"
+        onRequestClose={() => setShowBarcodeScan(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: colors.shadow }}>
+          <View
+            style={{
+              padding: 16,
+              paddingTop: insets.top + 8,
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: colors.text, fontSize: 16, fontWeight: "700" }}>
+              Scan a barcode
+            </Text>
+            <TouchableOpacity onPress={() => setShowBarcodeScan(false)}>
+              <Text style={{ color: colors.textSecondary, fontSize: 15 }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+
+          {camPermission?.granted ? (
+            <CameraView
+              style={{ flex: 1 }}
+              barcodeScannerSettings={{
+                barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e", "code128"],
+              }}
+              onBarcodeScanned={handleBarcodeScanned}
+            />
+          ) : (
+            <View
+              style={{
+                flex: 1,
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 12,
+              }}
+            >
+              <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
+                Camera access is needed to scan barcodes.
+              </Text>
+              <TouchableOpacity
+                onPress={requestCamPermission}
+                style={{
+                  backgroundColor: colors.brand,
+                  borderRadius: 10,
+                  padding: 12,
+                }}
+              >
+                <Text style={{ color: colors.onBrand, fontWeight: "600" }}>Grant access</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {scanningLock && (
+            <Text
+              style={{
+                color: colors.textSecondary,
+                textAlign: "center",
+                padding: 12,
+              }}
+            >
+              Looking up product...
+            </Text>
+          )}
+        </View>
+      </Modal>
+    </>
+  );
+}

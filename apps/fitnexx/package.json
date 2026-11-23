@@ -16,6 +16,7 @@
   "dependencies": {
     "@devdaj/app-data": "workspace:*",
     "@devdaj/auth": "workspace:*",
+    "@devdaj/telemetry": "workspace:*",
     "@expo/vector-icons": "^15.0.2",
     "@fitnexx/ai": "workspace:*",
     "@react-native-async-storage/async-storage": "^2.1.0",

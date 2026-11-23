@@ -12,6 +12,7 @@ import {
   parseAnalysisResult,
 } from "./foodAnalysisCore";
 import { requireSupabase } from "./supabase";
+import { captureAppError } from "./telemetry";
 import type { FoodAnalysisJob, FoodAnalysisResult } from "./types";
 
 const listeners = new Set<() => void>();
@@ -250,6 +251,12 @@ export async function drainFoodAnalysisQueue(options: DrainOptions): Promise<voi
               : isRetryableError(error);
         const message = error instanceof Error ? error.message : "Food analysis failed.";
         if (!retryable) {
+          captureAppError(error, {
+            source: "food-analysis",
+            request_id: job.request.requestId,
+            scan_id: job.request.scanId,
+            retryable: false,
+          });
           await updateJob(job.id, (current) =>
             current.status === "pending"
               ? { ...current, status: "failed", lastError: message }
@@ -259,6 +266,12 @@ export async function drainFoodAnalysisQueue(options: DrainOptions): Promise<voi
         }
         const attempts = job.attempts + 1;
         if (attempts >= FOOD_ANALYSIS_MAX_ATTEMPTS) {
+          captureAppError(error, {
+            source: "food-analysis",
+            request_id: job.request.requestId,
+            scan_id: job.request.scanId,
+            attempts,
+          });
           await updateJob(job.id, (current) =>
             current.status === "pending"
               ? { ...current, status: "failed", lastError: message }

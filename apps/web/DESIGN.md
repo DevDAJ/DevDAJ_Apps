@@ -167,13 +167,13 @@ typography:
     fontSize: "12px"
     fontWeight: 500
     lineHeight: 1.45
-    fontFeature: "\"tnum\""
+    fontFeature: '"tnum"'
   chart:
     fontFamily: "Geist Variable, ui-sans-serif, system-ui, sans-serif"
     fontSize: "11px"
     fontWeight: 400
     lineHeight: 1.45
-    fontFeature: "\"tnum\""
+    fontFeature: '"tnum"'
 rounded:
   arrow: "2px"
   swatch: "3px"
@@ -286,6 +286,7 @@ The suite site is near-white paper, ink-navy type and Geist. Each app page is it
 Density is relaxed on marketing pages (7rem section rhythm, 80rem container) and tighter on the dashboard, which reuses the same tokens, cards and chart inks.
 
 **Key Characteristics:**
+
 - Light near-white ground, ink-navy text, Geist Variable throughout the suite.
 - One line ink per line, carried by thick round-capped strokes and ringed stations.
 - Per-app worlds via `[data-app]`: own ground, brand ink and display face.
@@ -297,14 +298,17 @@ Density is relaxed on marketing pages (7rem section rhythm, 80rem container) and
 A quiet cool-neutral ground so the four line inks are the only saturated colour on the page.
 
 ### Primary
+
 - **Dataset Cobalt** (`oklch(0.56 0.17 262)`, `--line-cobalt`, `--brand` on the suite): the global dataset's line and the suite's accent. Focus outline, caret, selection tint, the "how it works" line, dataset panel rules and icon tiles.
 
 ### Secondary
+
 - **Signal Scarlet** (`oklch(0.6 0.2 30)`): the Fitnexx line. Becomes `oklch(0.66 0.21 32)` and the page brand inside the Fitnexx world.
 - **Ledger Amber** (`oklch(0.74 0.15 70)`): the Finance Tracker line. `oklch(0.8 0.15 75)` and brand in the Finance world.
 - **Leaf Green** (`oklch(0.6 0.14 155)`): the Pantry Helper line. `oklch(0.52 0.13 152)` and brand in the Pantry world.
 
 ### Neutral
+
 - **Paper White** (`oklch(0.985 0.002 260)`): page ground.
 - **Card White** (`oklch(1 0 0)`): cards, hero panels, popovers, inputs.
 - **Platform Grey** (`oklch(0.965 0.005 260)`): `--surface`; footer, list hover, code blocks.
@@ -315,9 +319,11 @@ A quiet cool-neutral ground so the four line inks are the only saturated colour 
 - **Signal Red** (`oklch(0.56 0.2 27)`): destructive and flagged states only.
 
 ### Chart Inks
+
 Dashboard series are the line inks stepped for a light surface: `--series-1..4` (scarlet, cobalt, amber, green). Review outcomes use ink-navy weights (`--outcome-approved` `oklch(0.32 0.03 265)`, `--outcome-rejected` `oklch(0.78 0.015 265)`), red for flagged and a translucent navy for pending. Grid `--chart-grid` 8% navy, axis 25%.
 
 ### Named Rules
+
 **The One Ink Per Line Rule.** Every line ink belongs to one line: scarlet Fitnexx, amber Finance, green Pantry, cobalt the dataset. Inks appear as lines, stations, series and brand, never as decoration; a new app gets a new ink.
 
 **The Brand Follows The Page Rule.** UI reads `--brand`, never a fixed ink. On the suite it is cobalt; under `[data-app]` it is that app's line ink, so focus, selection, buttons and badges re-colour with the world.
@@ -331,6 +337,7 @@ Dashboard series are the line inks stepped for a light surface: `--series-1..4` 
 **Character:** Geist is a neutral, tightly tracked product voice; the app display faces give each world its own accent without touching body text.
 
 ### Hierarchy
+
 - **Display, app** (700, `clamp(3.4rem, 9vw, 7rem)`, 0.9, -0.02em): app name on its page, in the world's display face.
 - **Display** (600, `clamp(2.4rem, 4.4vw, 4rem)`, 1.02, -0.04em): landing headline, max 17ch.
 - **Headline** (600, `clamp(1.9rem, 3vw, 2.6rem)`, 1.08, -0.035em): landing section headings; `clamp(1.8rem, 3vw, 2.6rem)` in the closing band; app pages use the display face at `clamp(2rem, 3.4vw, 3rem)`, 1.05.
@@ -341,6 +348,7 @@ Dashboard series are the line inks stepped for a light surface: `--series-1..4` 
 - **Chart** (11px axis and legend, 12px/500 tooltip), tabular numerals throughout data.
 
 ### Named Rules
+
 **The Display Face Stays In Its World Rule.** `font-display` is used only for app names, app-page headings and stop names. Body, labels and the suite headline stay in Geist.
 
 **The Tabular Data Rule.** Numbers in tables, charts and stop counters use tabular figures (`.tabular`, `.dashboard-chart`); headline figures switch back to proportional.
@@ -354,10 +362,12 @@ Container `max-w-[80rem]` with 1rem gutters (2rem from `sm`). Marketing sections
 Hybrid: hairline borders define every surface, and two soft two-layer shadows lift them. Dark app worlds deepen the same two tokens with black at higher opacity.
 
 ### Shadow Vocabulary
+
 - **Soft** (`--shadow-soft: 0 1px 2px oklch(0.2 0.02 265 / 5%), 0 8px 24px -12px oklch(0.2 0.02 265 / 12%)`): cards, panels, primary buttons, legacy `.card`.
 - **Lift** (`--shadow-lift: 0 2px 4px oklch(0.2 0.02 265 / 6%), 0 24px 48px -24px oklch(0.2 0.02 265 / 22%)`): hero panels, app hero figures, popovers, chart tooltips, and cards on hover or when their line is lit.
 
 ### Named Rules
+
 **The Lift On Focus Rule.** A card rises (`-translate-y-1`, soft to lift) when hovered or when its line is focused on the map; nothing else animates elevation.
 
 ## Shapes
@@ -369,6 +379,7 @@ Line geometry: thick round-capped strokes that bend only at 45 or 90 degrees; st
 ## Components
 
 ### Buttons
+
 - **Shape:** pill (`rounded-full`).
 - **Primary:** ink-navy fill, background-coloured text, 44px tall, 20px sides, 0.95rem/500, soft shadow, trailing arrow icon. Hover opacity 0.9; active nudges down 1px.
 - **Secondary:** card fill, hairline border, ink text; hover to `--muted`.
@@ -376,10 +387,12 @@ Line geometry: thick round-capped strokes that bend only at 45 or 90 degrees; st
 - **Dashboard:** 36px pill, 0.875rem; shadcn `Button` (rounded-lg) remains for small controls.
 
 ### Chips and badges
+
 - **Service badge:** 24px pill, 0.75rem/500. Running: card fill, hairline border, brand dot with a 3px brand halo. Planned: dashed border, muted text, dashed-ring dot.
 - **Status plate:** 24px, 0.3rem radius, 0.7rem bold uppercase; solid navy for approved, muted for rejected, red for flagged, dashed outline for waiting.
 
 ### Cards / Containers
+
 - **Corner Style:** `rounded-2xl`; hero panels 1.75rem.
 - **Background:** card white; app-card tops and hero panels add the dot grid.
 - **Shadow Strategy:** soft at rest, lift on hover or lit (see Elevation).
@@ -387,16 +400,20 @@ Line geometry: thick round-capped strokes that bend only at 45 or 90 degrees; st
 - **Internal Padding:** 1.5rem (1.75rem panels, 1rem-1.25rem dashboard figures).
 
 ### Inputs / Fields
+
 - **Style:** 40px, card fill, `--input` border, 0.6rem radius, 0.875rem text, placeholder at 40% ink.
 - **Focus:** 2px `--brand` outline (offset 1px in legacy forms, 3px globally).
 
 ### Navigation
+
 Sticky 64px header, background at 75% with `backdrop-blur-xl`, hairline bottom border. Wordmark left; pill nav links (0.875rem/500, muted, hover muted fill, active ink); "Sign in" as a small navy pill. Below `md` the links collapse into a `<details>` popover (rounded-xl, lift shadow). Footer on `--surface` with a three-column grid and line-ink dashes beside each app.
 
 ### Transit Map (signature)
+
 Wide and tall SVG layouts of the network. Lines draw in once (`line-draw`, 1.4s `cubic-bezier(0.16, 1, 0.3, 1)`); planned lines fade in after. Hovering or focusing a line (or its app card) thickens it by 4 and dims the others to 18% opacity. All motion stops under `prefers-reduced-motion`.
 
 ### Wordmark
+
 Four line inks meeting at a navy interchange ring (28px), then "Apps" at 1.05rem/600 with a muted 0.75rem "by DevDAJ".
 
 ## App Worlds
@@ -412,6 +429,7 @@ The landing app cards preview each world in their top half (same `[data-app]`, t
 ## Do's and Don'ts
 
 ### Do:
+
 - **Do** read colour through tokens (`--brand`, `--foreground`, `LINE_INK`) so `[data-app]` can re-theme a page.
 - **Do** draw lines with round caps, 45/90 degree bends and ringed stations; dash everything planned.
 - **Do** use `--shadow-soft` at rest and `--shadow-lift` for raised or lit surfaces.
@@ -419,6 +437,7 @@ The landing app cards preview each world in their top half (same `[data-app]`, t
 - **Do** label illustrative app UI or data as illustrative until real screenshots exist.
 
 ### Don't:
+
 - **Don't** use a line ink for anything that is not its line, its series or its page's brand.
 - **Don't** use gradient hero backgrounds or gradient text; gradients exist only as line dashes and app textures.
 - **Don't** put "Get started" on every CTA; name the action ("Explore the apps", "Get Fitnexx").

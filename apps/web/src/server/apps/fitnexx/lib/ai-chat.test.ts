@@ -38,8 +38,12 @@ test("chatCompletion calls OpenRouter and maps content and usage", async () => {
   expect(fetchMock).toHaveBeenCalledTimes(1);
   const [url, init] = fetchMock.mock.calls[0];
   expect(url).toBe("https://openrouter.ai/api/v1/chat/completions");
-  const body = JSON.parse(typeof init?.body === "string" ? init.body : "") as { model: string };
+  const body = JSON.parse(typeof init?.body === "string" ? init.body : "") as {
+    model: string;
+    provider?: { zdr?: boolean };
+  };
   expect(body.model).toBe("openai/gpt-4.1-mini");
+  expect(body.provider).toEqual({ zdr: true });
 });
 
 test("without an OpenRouter key nothing is sent", async () => {

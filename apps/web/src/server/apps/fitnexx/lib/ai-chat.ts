@@ -2,13 +2,13 @@ import { AIMessage, HumanMessage, SystemMessage } from "@langchain/core/messages
 import type { MessageContent } from "@langchain/core/messages";
 import { ChatOpenAI } from "@langchain/openai";
 import { fitnexxEnv } from "../env";
+import { OPENROUTER_BASE_URL, OPENROUTER_MODEL_KWARGS } from "./openrouter";
 
 /**
  * Pro AI chat: one LangChain chain over OpenRouter, the same stack as the food
  * scanner. App-local on purpose; shared packages stay app-agnostic.
  */
 
-const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 const DEFAULT_AI_MODELS = "openai/gpt-4.1-mini,anthropic/claude-sonnet-4,google/gemini-2.5-flash";
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
@@ -48,6 +48,7 @@ export async function chatCompletion(request: ChatRequest): Promise<ChatResponse
     maxTokens: request.maxTokens ?? 800,
     maxRetries: 2,
     useResponsesApi: false,
+    modelKwargs: OPENROUTER_MODEL_KWARGS,
     configuration: { baseURL: OPENROUTER_BASE_URL },
   });
   const response = await model.invoke(

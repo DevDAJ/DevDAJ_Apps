@@ -40,7 +40,7 @@ vi.mock("./shared/supabase", () => ({
 const { app } = await import("./app");
 const models = (token?: string) =>
   app.handle(
-    new Request("http://localhost/api/v1/fitnexx/ai/models?provider=openai", {
+    new Request("http://localhost/api/v1/fitnexx/ai/models", {
       headers: token ? { authorization: `Bearer ${token}` } : {},
     }),
   );
@@ -64,12 +64,13 @@ describe("shared login + fitnexx pro", () => {
     expect(calls).toEqual(["upsert:user-1", "select:isPro"]);
   });
 
-  test("a Pro account passes auth (then fails on the unset provider key)", async () => {
+  test("a Pro account passes auth and gets the model catalog", async () => {
     isPro = true;
-    delete process.env.OPENAI_API_KEY;
     const res = await models("good-user-2");
-    expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: "openai is not configured on the server." });
+    expect(res.status).toBe(200);
+    const catalog = (await res.json()) as Array<{ id: string; name: string }>;
+    expect(catalog.length).toBeGreaterThan(0);
+    expect(catalog[0].id).toContain("/");
   });
 });
 

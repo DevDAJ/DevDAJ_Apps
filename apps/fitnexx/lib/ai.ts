@@ -1,51 +1,39 @@
-import {
-  AI_PROVIDERS,
-  type AIMessage,
-  type AIModel,
-  type AIProviderId,
-  type AIResponse,
-  type AISettings,
-  chat,
-  listModels,
-} from "@fitnexx/ai";
 import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
 
 import { storage } from "./storage";
-import { useAppStore } from "./store";
 import { requireSupabase } from "./supabase";
 
-const keyName = (provider: AIProviderId) => `fitnexx_ai_api_key_${provider}`;
+/**
+ * Pro-only AI: every call goes through the Fitnexx API, which runs LangChain
+ * over OpenRouter. The app never stores or sends provider keys.
+ */
 
-export async function clearAIKeys(): Promise<void> {
-  await Promise.all(
-    AI_PROVIDERS.map((provider) => SecureStore.deleteItemAsync(keyName(provider.id))),
+export type AIMessage = { role: "system" | "user" | "assistant"; content: string };
+export type AIModel = { id: string; name: string };
+export type AIUsage = { promptTokens: number; completionTokens: number; totalTokens: number };
+export type AIResponse = { content: string; usage: AIUsage };
+export type AISettings = { model: string };
+export type UsageRecord = AIUsage & {
+  id: string;
+  timestamp: string;
+  model: string;
+  durationMs: number;
+};
+
+export function summarizeUsage(records: UsageRecord[]) {
+  return records.reduce(
+    (summary, record) => ({
+      calls: summary.calls + 1,
+      promptTokens: summary.promptTokens + record.promptTokens,
+      completionTokens: summary.completionTokens + record.completionTokens,
+      totalTokens: summary.totalTokens + record.totalTokens,
+    }),
+    { calls: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0 },
   );
 }
 
-export async function getAIKey(provider: AIProviderId): Promise<string> {
-  return (await SecureStore.getItemAsync(keyName(provider))) ?? "";
-}
-
-export async function saveAIConfiguration(settings: AISettings, apiKey: string): Promise<void> {
-  await Promise.all([
-    storage.saveAISettings(settings),
-    apiKey
-      ? SecureStore.setItemAsync(keyName(settings.provider), apiKey)
-      : SecureStore.deleteItemAsync(keyName(settings.provider)),
-  ]);
-}
-
-export async function getAIModels(settings: AISettings, apiKey: string): Promise<AIModel[]> {
-  if (settings.usePro) {
-    return proRequest<AIModel[]>(
-      `/api/v1/fitnexx/ai/models?provider=${encodeURIComponent(settings.provider)}`,
-    );
-  }
-  return listModels({ ...settings, apiKey });
-}
-
-async function proRequest<T>(path: string, init?: RequestInit): Promise<T> {
+async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const apiUrl = process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, "");
   if (!apiUrl) throw new Error("The Fitnexx API URL is not configured.");
   const { data } = await requireSupabase().auth.getSession();
@@ -67,31 +55,31 @@ async function proRequest<T>(path: string, init?: RequestInit): Promise<T> {
   return result;
 }
 
+/** Pro model catalog (OpenRouter ids), served by the API. */
+export async function getAIModels(): Promise<AIModel[]> {
+  return apiRequest<AIModel[]>("/api/v1/fitnexx/ai/models");
+}
+
+export async function saveAIConfiguration(settings: AISettings): Promise<void> {
+  await storage.saveAISettings(settings);
+}
+
 export async function callAI(
   messages: AIMessage[],
   options?: { maxTokens?: number; temperature?: number },
 ): Promise<AIResponse> {
   const settings = await storage.getAISettings();
   const startedAt = Date.now();
-  const response =
-    settings.usePro && useAppStore.getState().isPro
-      ? await proRequest<AIResponse>("/api/v1/fitnexx/ai/chat", {
-          method: "POST",
-          body: JSON.stringify({ ...settings, ...options, messages }),
-        })
-      : await chat({
-          ...settings,
-          ...options,
-          messages,
-          apiKey: await getAIKey(settings.provider),
-        });
+  const response = await apiRequest<AIResponse>("/api/v1/fitnexx/ai/chat", {
+    method: "POST",
+    body: JSON.stringify({ model: settings.model, messages, ...options }),
+  });
   const records = await storage.getAIUsage();
   await storage.saveAIUsage(
     [
       {
         id: Crypto.randomUUID(),
         timestamp: new Date().toISOString(),
-        provider: settings.provider,
         model: settings.model,
         durationMs: Date.now() - startedAt,
         ...response.usage,
@@ -100,4 +88,13 @@ export async function callAI(
     ].slice(0, 500),
   );
   return response;
+}
+
+/** Removes provider keys stored by the retired bring-your-own-key mode. */
+export async function clearLegacyAIKeys(): Promise<void> {
+  await Promise.all(
+    ["openai", "anthropic", "google", "openrouter", "custom"].map((provider) =>
+      SecureStore.deleteItemAsync(`fitnexx_ai_api_key_${provider}`),
+    ),
+  );
 }

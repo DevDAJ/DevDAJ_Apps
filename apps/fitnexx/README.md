@@ -17,7 +17,6 @@ Imported from the standalone `DevDAJ/fitnexx` repo (mobile app only). Its backen
 | `scripts/food-model/` | Python tooling for the food photo model (dataset, training, release) |
 | `docs/ai-setup.md`    | Supabase, RevenueCat, AI provider and food model setup               |
 
-Shared AI client: [`packages/fitnexx-ai`](../../packages/fitnexx-ai) (`@fitnexx/ai`).
 Shared schema migrations: [`packages/db`](../../packages/db) (`@devdaj/db`), one Supabase project for all apps.
 
 ## Development

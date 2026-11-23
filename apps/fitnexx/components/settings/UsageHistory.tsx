@@ -1,4 +1,4 @@
-import { summarizeUsage, type UsageRecord } from "@fitnexx/ai";
+import { summarizeUsage, type UsageRecord } from "../../lib/ai";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Alert, Text, TouchableOpacity, View } from "react-native";
@@ -85,7 +85,7 @@ export function UsageHistory() {
               {record.model}
             </Text>
             <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>
-              {record.provider} · {new Date(record.timestamp).toLocaleDateString()}
+              {new Date(record.timestamp).toLocaleDateString()}
             </Text>
           </View>
           <Text style={{ color: colors.textSecondary, fontSize: 12 }}>

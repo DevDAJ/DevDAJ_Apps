@@ -3,22 +3,19 @@ import { bodyLimits } from "../../../shared/body";
 import { rejectGuest } from "../../../shared/auth";
 import { fitnexxAuth } from "../auth";
 import {
-  analyzeNutrition,
   analyzeScan,
   deleteScan,
   getUsage,
-  isVisionRequest,
   prepareUpload,
-  reviewScan,
   type Usage,
 } from "./food-analysis.service";
 
 /**
- * Food photo analysis. Same contract as the original Next.js route:
- * GET usage · PUT reserve upload · POST vision (`{scanId}`) or nutrition (`{requestId, detectedItems}`)
- * · PATCH review · DELETE scan.
+ * Food photo analysis. One POST runs the full LangChain pipeline: vision identifies and weights
+ * components, then the nutrition model profiles any component not already cached in the database.
+ * GET usage · PUT reserve upload · POST analyse · DELETE scan.
  *
- * Guests get no food-analysis allowance: usage reads as 0 and the spending/review routes
+ * Guests get no food-analysis allowance: usage reads as 0 and the spending routes
  * return 403 `account_required` so the app can offer to create an account.
  */
 const GUEST_USAGE: Usage = { isPro: false, limit: 0, remaining: 0 };
@@ -47,20 +44,9 @@ export const foodAnalysis = new Elysia({ prefix: "/food-analysis", tags: ["fitne
     "",
     ({ user, body }) => {
       rejectGuest(user);
-      return isVisionRequest(body) ? analyzeScan(user.id, body) : analyzeNutrition(user.id, body);
+      return analyzeScan(user.id, body);
     },
-    { member: "Sign in to use food analysis.", jsonLimit: 32_000 },
-  )
-  .patch(
-    "",
-    ({ user, body }) => {
-      rejectGuest(user);
-      return reviewScan(user.id, body);
-    },
-    {
-      member: "Sign in to review food analysis.",
-      jsonLimit: 32_000,
-    },
+    { member: "Sign in to use food analysis.", jsonLimit: 4_000 },
   )
   .delete(
     "",

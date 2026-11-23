@@ -11,9 +11,8 @@ import {
   parseAnalysisJobs,
   parseAnalysisResult,
 } from "./foodAnalysisCore";
-import { parseDetectedFoods } from "./foodVision";
 import { requireSupabase } from "./supabase";
-import type { DetectedFood, FoodAnalysisJob, FoodAnalysisResult } from "./types";
+import type { FoodAnalysisJob, FoodAnalysisResult } from "./types";
 
 const listeners = new Set<() => void>();
 let draining = false;
@@ -63,11 +62,10 @@ async function updateJob(
 
 export async function enqueueFoodAnalysis(
   ownerId: string,
-  detectedItems: DetectedFood[],
-  scanId?: string,
+  scanId: string,
 ): Promise<FoodAnalysisJob> {
   if (!ownerId) throw new Error("Sign in to analyze food.");
-  const items = parseDetectedFoods(detectedItems.map((item) => ({ ...item })));
+  if (!scanId) throw new Error("A food scan is required.");
   const now = new Date().toISOString();
   const job: FoodAnalysisJob = {
     id: Crypto.randomUUID(),
@@ -76,7 +74,7 @@ export async function enqueueFoodAnalysis(
     nextAttemptAt: now,
     attempts: 0,
     status: "pending",
-    request: { requestId: "", detectedItems: items, scanId },
+    request: { requestId: "", scanId },
   };
   job.request.requestId = job.id;
   const jobs = await getFoodAnalysisJobs();
@@ -116,9 +114,7 @@ async function foodAnalysisApi(
   return payload;
 }
 
-export async function analyzeFoodPhotoOnServer(
-  photoUri: string,
-): Promise<{ scanId: string; items: DetectedFood[] }> {
+export async function analyzeFoodPhotoOnServer(photoUri: string): Promise<{ scanId: string }> {
   const photo = await fetch(photoUri);
   if (!photo.ok) throw new Error("Could not read the food photo.");
   const blob = await photo.blob();
@@ -139,29 +135,11 @@ export async function analyzeFoodPhotoOnServer(
       .storage.from("food-scan-images")
       .uploadToSignedUrl(upload.path, upload.token, blob, { contentType });
     if (error) throw error;
-    const result = (await foodAnalysisApi("POST", {
-      scanId: upload.scanId,
-    })) as { scanId?: unknown; items?: unknown };
-    if (result.scanId !== upload.scanId) {
-      throw new Error("Food scan response did not match the upload.");
-    }
-    return { scanId: upload.scanId, items: parseDetectedFoods(result.items) };
+    return { scanId: upload.scanId };
   } catch (error) {
     await foodAnalysisApi("DELETE", { scanId: upload.scanId }).catch(() => undefined);
     throw error;
   }
-}
-
-export async function submitFoodReview(
-  scanId: string,
-  reviewedItems: DetectedFood[],
-  contribute: boolean,
-): Promise<void> {
-  await foodAnalysisApi("PATCH", {
-    scanId,
-    reviewedItems: parseDetectedFoods(reviewedItems),
-    contribute,
-  });
 }
 
 export async function removeFoodAnalysisJob(id: string): Promise<void> {

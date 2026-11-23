@@ -13,14 +13,11 @@ export const fitnexxEnv = {
   get openrouterApiKey() {
     return process.env.OPENROUTER_API_KEY;
   },
-  get foodVisionUrl() {
-    return process.env.FITNEXX_QWEN_FOOD_API_URL;
-  },
-  get foodVisionKey() {
-    return process.env.FITNEXX_QWEN_FOOD_API_KEY;
-  },
   get foodVisionModel() {
-    return process.env.FITNEXX_QWEN_FOOD_MODEL ?? "Qwen/Qwen3.5-4B";
+    return process.env.FITNEXX_FOOD_VISION_MODEL ?? "google/gemini-2.5-flash";
+  },
+  get foodNutritionModel() {
+    return process.env.FITNEXX_FOOD_NUTRITION_MODEL ?? "openai/gpt-4.1-mini";
   },
   get revenuecatWebhookSecret() {
     return process.env.FITNEXX_REVENUECAT_WEBHOOK_SECRET ?? "";

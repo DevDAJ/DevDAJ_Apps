@@ -214,6 +214,7 @@ export interface Meal {
   protein: number;
   carbs: number;
   fat: number;
+  fiber?: number;
   imageUri?: string;
 }
 
@@ -226,46 +227,55 @@ export interface MealTemplate {
   fat: number;
 }
 
-export type PortionBucket = "small" | "typical" | "large" | "unknown";
-
-export interface DetectedFood {
-  name: string;
-  count: number | null;
-  portionDescription: string;
-  portionBucket: PortionBucket;
-  preparation: string | null;
-  confidence: "low" | "medium" | "high";
+export interface NutrientValues {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber: number;
 }
 
-export interface FoodAnalysisRequest {
-  requestId: string;
-  detectedItems: DetectedFood[];
-  scanId?: string;
+export interface NutrientConsistency {
+  expectedCalories: number;
+  delta: number;
+  ok: boolean;
+  note: string;
 }
 
+/** A detected meal component with its reusable nutrition profile. */
 export interface FoodAnalysisItem {
+  id: string;
+  componentId: string | null;
   name: string;
-  fdcId: string;
+  preparation: string | null;
+  portionDescription: string;
   grams: number;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
+  estimatedGrams: number;
+  per100: NutrientValues;
+  perGram: NutrientValues;
+  source: "usda" | "ai";
+  fdcId: string | null;
   confidence: number;
+  consistency: NutrientConsistency;
 }
 
-export interface FoodAnalysisTotals {
+export interface FoodAnalysisTotals extends NutrientValues {
   grams: number;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
 }
 
 export interface FoodAnalysisResult {
   requestId: string;
-  items: FoodAnalysisItem[];
+  scanId: string;
+  components: FoodAnalysisItem[];
   totals: FoodAnalysisTotals;
+  visionModel: string;
+  nutritionModel: string;
+  cacheHits: number;
+}
+
+export interface FoodAnalysisRequest {
+  requestId: string;
+  scanId: string;
 }
 
 export type FoodAnalysisJobStatus = "pending" | "ready" | "failed";

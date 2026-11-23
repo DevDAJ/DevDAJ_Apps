@@ -22,7 +22,6 @@ packages/auth       shared headless login (core + React context/hook binding)
 packages/app-data   on-device SQLite, cross-app read-only sharing
 packages/telemetry  errors-only PostHog capture, one key per project
 packages/db         the single ordered Supabase migration history
-packages/utils      starter library template
 ```
 
 ## Headless packages

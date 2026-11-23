@@ -45,8 +45,7 @@ before committing: the hook does not run tests or builds.
 
 - Unit tests import from `vite-plus/test` (Vitest-compatible API: `test`,
   `expect`, `describe`, `vi`), not from `vitest` directly.
-- Tests live next to the code as `*.test.ts` (the `utils` starter keeps them
-  in `tests/`).
+- Tests live next to the code as `*.test.ts`.
 - Server tests stub Supabase and `fetch` with `vi.mock` / `vi.stubGlobal`;
   see `apps/web/src/server/auth.test.ts` and
   `apps/web/src/server/apps/fitnexx/lib/ai-chat.test.ts` for the patterns.

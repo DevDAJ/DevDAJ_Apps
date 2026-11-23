@@ -37,7 +37,7 @@ guidelines explain what "matching" means here.
   `src/server/shared/` or `src/server/platform/`.
 - Mobile: `apps/fitnexx/lib/` for logic, `components/` for UI,
   `app/` for expo-router screens.
-- Tests: `*.test.ts` next to the code (the `utils` starter uses `tests/`).
+- Tests: `*.test.ts` next to the code.
 - Shared packages: app-agnostic and headless. No UI, no app-specific types,
   no imports from apps. App glue lives in the app.
 

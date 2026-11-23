@@ -64,3 +64,12 @@ Errors are `DevdajAuthError` with a user-safe `message` and the Supabase `code`.
    upgrades). Strongly recommended: turn on CAPTCHA/Turnstile (pass `captchaToken` to
    `signInAsGuest`), because each guest is a database user and the default limit is 30 per hour per IP.
    Delete stale guests periodically, since Supabase doesn't clean them up automatically.
+
+## Development
+
+Headless by design: the core is framework-agnostic and `@devdaj/auth/react` is
+only a context provider plus `useAuth()` hook (no screens, no styles). Apps
+build their own UI on top.
+
+From `packages/auth`: `vp test`, `tsc --noEmit`. From the repo root:
+`bun run ready` is the full gate.

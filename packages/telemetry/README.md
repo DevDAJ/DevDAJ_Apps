@@ -72,3 +72,8 @@ Shared host override for servers: `POSTHOG_HOST` (defaults to
    `context`, `telemetry_distinct_id`, `error_event_id`.
 3. If consent is on, a `bug_report_submitted` event carries `bug_report_id`
    and `error_event_id`, so PostHog and the database point at each other.
+
+## Development
+
+From `packages/telemetry`: `vp test`, `tsc --noEmit`. From the repo root:
+`bun run ready` is the full gate.

@@ -79,3 +79,8 @@ if (await appData.has("fitnexx")) {
 - On Android the provider keeps one connection open for the life of the process. Expo's SQLite and
   Android's SQLite are separate copies in the same process, and closing one copy's file handle would
   drop the other's locks.
+
+## Development
+
+From `packages/app-data`: `vp test`, `tsc --noEmit`. From the repo root:
+`bun run ready` is the full gate.

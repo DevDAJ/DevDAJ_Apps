@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["AppDataModule"]
+  },
+  "android": {
+    "modules": ["tech.devdaj.appdata.AppDataModule"]
+  }
+}

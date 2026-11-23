@@ -1,0 +1,32 @@
+{
+  "name": "@devdaj/app-data",
+  "version": "0.1.0",
+  "private": true,
+  "description": "On-device SQLite data shared between DevDAJ apps: one folder per app, readable by the other apps.",
+  "homepage": "https://devdaj.tech",
+  "license": "UNLICENSED",
+  "author": "DevDAJ",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./shared": "./src/shared.ts",
+    "./app.plugin.js": "./app.plugin.js",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "vp test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "expo": "~57.0.20",
+    "expo-sqlite": "~57.0.5",
+    "typescript": "^7.0.2",
+    "vite-plus": "catalog:"
+  },
+  "peerDependencies": {
+    "expo": ">=57",
+    "expo-sqlite": ">=57"
+  }
+}

@@ -42,7 +42,7 @@ function sentBody(fetchMock: ReturnType<typeof stubCompletion>) {
   const [url, init] = fetchMock.mock.calls[0];
   expect(url).toBe("https://openrouter.ai/api/v1/chat/completions");
   return JSON.parse(typeof init?.body === "string" ? init.body : "") as {
-    provider?: { zdr?: boolean };
+    provider?: { zdr?: boolean; data_collection?: string };
   };
 }
 
@@ -63,7 +63,7 @@ test("vision requests enforce OpenRouter zero data retention", async () => {
   await expect(vision.invoke(visionMessages("https://example.test/meal.jpg"))).resolves.toEqual(
     result,
   );
-  expect(sentBody(fetchMock).provider).toEqual({ zdr: true });
+  expect(sentBody(fetchMock).provider).toEqual({ zdr: true, data_collection: "deny" });
 });
 
 test("nutrition requests enforce OpenRouter zero data retention", async () => {
@@ -93,5 +93,5 @@ test("nutrition requests enforce OpenRouter zero data retention", async () => {
     references: ["No USDA reference available."],
   });
   await expect(nutrition.invoke(input)).resolves.toEqual(result);
-  expect(sentBody(fetchMock).provider).toEqual({ zdr: true });
+  expect(sentBody(fetchMock).provider).toEqual({ zdr: true, data_collection: "deny" });
 });

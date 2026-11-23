@@ -69,10 +69,12 @@ mounted at `/api/*` for the apps. Layout and route macros (`auth`, `member`,
 All AI runs on the API through LangChain (`@langchain/openai` `ChatOpenAI`)
 over OpenRouter (`https://openrouter.ai/api/v1`, one `OPENROUTER_API_KEY`).
 No bring-your-own-key mode; apps never store or send provider keys. Every
-request enforces Zero Data Retention (`provider.zdr: true`, shared policy in
+request enforces Zero Data Retention and denies data collection
+(`provider: { zdr: true, data_collection: "deny" }`, shared policy in
 `apps/web/src/server/apps/fitnexx/lib/openrouter.ts`), so OpenRouter routes
-only to endpoints that do not retain prompts or responses. OpenRouter
-expresses this as a request body field, not a header.
+only to endpoints that do not retain prompts or responses and excludes
+providers that store or train on them. OpenRouter expresses this as request
+body fields, not headers.
 
 - Pro AI chat (`apps/fitnexx` exercise suggestions): plain chain,
   `FITNEXX_AI_MODELS` allowlist of OpenRouter model ids, Pro-only, 20

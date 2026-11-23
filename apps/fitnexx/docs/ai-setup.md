@@ -80,10 +80,11 @@ openai/gpt-4.1-mini,anthropic/claude-sonnet-4,google/gemini-2.5-flash
 ```
 
 Every OpenRouter request (chat and both scanner steps) enforces Zero Data
-Retention with `provider.zdr: true`, so model endpoints do not retain prompts
-or responses. OpenRouter expresses this as a request body field, not a
-header; the shared policy lives in
-`apps/web/src/server/apps/fitnexx/lib/openrouter.ts`.
+Retention with `provider.zdr: true` and denies data collection with
+`provider.data_collection: "deny"`, so model endpoints do not retain prompts
+or responses and providers that store or train on them are excluded.
+OpenRouter expresses this as request body fields, not headers; the shared
+policy lives in `apps/web/src/server/apps/fitnexx/lib/openrouter.ts`.
 
 Set `EXPO_PUBLIC_API_URL` in the mobile environment to the deployed API origin.
 For local device testing, use a URL reachable from the device rather than

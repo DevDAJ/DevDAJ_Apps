@@ -40,10 +40,10 @@ test("chatCompletion calls OpenRouter and maps content and usage", async () => {
   expect(url).toBe("https://openrouter.ai/api/v1/chat/completions");
   const body = JSON.parse(typeof init?.body === "string" ? init.body : "") as {
     model: string;
-    provider?: { zdr?: boolean };
+    provider?: { zdr?: boolean; data_collection?: string };
   };
   expect(body.model).toBe("openai/gpt-4.1-mini");
-  expect(body.provider).toEqual({ zdr: true });
+  expect(body.provider).toEqual({ zdr: true, data_collection: "deny" });
 });
 
 test("without an OpenRouter key nothing is sent", async () => {

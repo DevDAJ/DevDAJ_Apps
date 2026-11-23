@@ -39,7 +39,8 @@ table. Verify against the code before relying on any detail here.
    apps. Pro chat stays allowlisted (`FITNEXX_AI_MODELS`) and rate-limited;
    the food scanner stays two-step with the permanent `food_component`
    library and idempotent requests. Every OpenRouter request enforces Zero
-   Data Retention (`provider.zdr: true`, `lib/openrouter.ts`).
+   Data Retention and denies data collection
+   (`provider: { zdr: true, data_collection: "deny" }`, `lib/openrouter.ts`).
 5. Telemetry is errors-only, opt-in on mobile, one PostHog key per project,
    anonymous (no person profiles, no user ids), no-op without a key.
 6. Guests never get Pro or a food-analysis allowance; Pro routes require a

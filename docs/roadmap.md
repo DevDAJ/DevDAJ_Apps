@@ -247,3 +247,48 @@ grocery spend, imported as transactions that point back to their source.
 14. Imports from Garage and Pantry.
 15. Community template library: repository format, on-device scrubbing,
     sample tests, breakage detection; seeded with the step 7 templates.
+
+### 5. Medication and supplement tracker (new)
+
+Schedules, a dose log, stock countdown, run-out dates, refill planning and a
+travel pack calculator. It records what the user sets up and never advises:
+no medical advice, no dosing suggestions, no model anywhere near doses.
+
+**Core features:**
+
+- Medications and supplements, user-entered (name, form, strength, unit); no
+  drug database.
+- Schedules: fixed times (daily or chosen weekdays), every N days, cycles (N
+  days on, M days off) and as-needed. Any limits shown for as-needed doses are
+  the user's own entries, displayed as notes.
+- Dose log, append-only: taken, skipped or late, with the time.
+- Stock countdown: each taken dose syncs as a decrement operation (never an
+  absolute value), so two devices logging at once never lose a dose.
+- Run-out date from current stock and the schedule's consumption, and refill
+  reminders with a lead time.
+- Travel pack calculator: trip dates in, doses needed per item plus buffer
+  days out, flagging anything the current stock cannot cover.
+
+**Sibling links (read and import):** a `public_v1_*` view of the dose log for
+the sleep and mood journal's correlations (for example magnesium against
+sleep quality); Ledger can import refill purchases.
+
+**Planned, in commit-sized steps:**
+
+1. App scaffold with `@devdaj/app-data`, schema, `public_v1_*` views, change
+   log, signed-out by default.
+2. Items and schedules on the recurrence engine (adding every-N-days and
+   on/off cycles to it if Garage has not needed them).
+3. Dose log with notification actions (taken, skip, snooze).
+4. Stock as decrement operations, refills that add stock, run-out dates.
+5. Refill reminders.
+6. Travel pack calculator.
+7. "Your data" screen and encrypted export on the shared logic.
+
+**Open questions:**
+
+- App name (it sets the `tech.devdaj.app.<name>` id).
+- Travelling across time zones: keep doses at the same local clock time, or
+  at the same interval since the last dose (per item, or one setting)?
+- Should a carer view (another person seeing the dose log through hosted
+  sharing) be planned now, or left to the hosted sync phase?

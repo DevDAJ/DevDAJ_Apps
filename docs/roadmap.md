@@ -126,3 +126,46 @@ Data lives in AsyncStorage and syncs as plaintext rows through
 **Risks:** step 11 is one of the three riskiest pieces in the plan (adding and
 removing members, a member losing their device, key rotation after removal).
 Until it lands, today's plaintext household sync stays as is.
+
+### 3. Vehicle log (new)
+
+Service intervals, fuel economy, renewals and an odometer forecast. Built
+together with the shared recurrence engine, which it is the first user of.
+
+**Core features:**
+
+- Vehicles, with odometer readings taken from every fill-up and service.
+- Fuel fill-ups; economy computed by the full-tank method (distance between
+  two full fills over the fuel added), partial fills carried forward.
+- Service items with intervals by distance, time, or both (whichever comes
+  first), and service records that reset them.
+- Road tax and insurance renewal dates with lead-time reminders (in Malaysia
+  insurance must be renewed before road tax).
+- Odometer forecast from recent readings (average distance per day), which
+  turns distance-based intervals into due dates the reminder engine can use.
+
+**Sibling links (read and import):** `public_v1_*` views of fuel and service
+costs for the finance tracker to import as expenses, and of renewal dates for
+the document vault's travel and expiry checks.
+
+**Planned, in commit-sized steps:**
+
+1. Recurrence engine package: interval by days or by distance with a
+   forecast, "whichever first", lead times; pure functions with tests.
+2. App scaffold with `@devdaj/app-data`, schema, `public_v1_*` views, change
+   log, signed-out by default.
+3. Vehicles and odometer readings.
+4. Fuel log and economy.
+5. Service items, records and due status.
+6. Odometer forecast feeding due dates.
+7. Road tax and insurance renewals.
+8. Local notifications from the recurrence engine.
+9. "Your data" screen and encrypted export on the shared logic.
+
+**Open questions:**
+
+- App name (it sets the `tech.devdaj.app.<name>` id).
+- Economy unit: km/L, L/100 km, or user's choice?
+- Starter service templates (oil, tyres, battery, brake fluid) as a generic
+  list, or user-built only?
+- Cars only, or motorcycles too (different default intervals)?

@@ -424,10 +424,15 @@ Fitnexx could show beside training.
    request, filling days without a manual entry).
 9. "Your data" screen and encrypted export on the shared logic.
 
-### 9. Work achievements journal (new)
+### 9. Track Record: work achievements journal (new)
 
 A weekly prompt to record wins, entries tagged by project, impact and skills,
 competency coverage and resume bullets built from templates.
+
+**Decisions (2026-11-28):** named Track Record
+(`tech.devdaj.app.trackrecord`); a few editable starter competency frameworks
+(engineering, product, general) that the user copies and edits; resume
+bullets from templates, with an optional model rewrite opted into per bullet.
 
 **Core features:**
 
@@ -448,15 +453,11 @@ competency coverage and resume bullets built from templates.
    log, signed-out by default.
 2. Entries with projects and skills.
 3. Weekly prompt on the recurrence engine.
-4. Competency list and coverage view.
+4. Competency list with starter frameworks, and the coverage view.
 5. Bullet templates as pure functions with tests, and export.
-6. Review filters.
-7. "Your data" screen and encrypted export on the shared logic.
-
-**Open questions:**
-
-- App name (it sets the `tech.devdaj.app.<name>` id).
-- Competency list: user-built only, or a few editable starter frameworks
-  (for example a generic engineering ladder)?
-- Bullets: templates only, or also an optional model rewrite through the
-  server (opt-in per bullet, since entries describe the user's employer)?
+6. Optional model rewrite of one bullet: a signed-in, rate-limited server
+   endpoint (OpenRouter with ZDR), sending only that entry after a warning
+   that it describes the user's employer, cached by input hash, result
+   editable before saving.
+7. Review filters.
+8. "Your data" screen and encrypted export on the shared logic.

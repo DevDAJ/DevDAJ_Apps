@@ -137,3 +137,17 @@ AI chat and the food scanner both run on LangChain over OpenRouter
 (`apps/fitnexx/lib/food-scanner/`, `lib/ai-chat.ts`). Setup and request bodies
 are documented in [`apps/fitnexx/docs/ai-setup.md`](../fitnexx/docs/ai-setup.md);
 the mobile clients are `apps/fitnexx/lib/ai.ts` and `lib/foodAnalysisQueue.ts`.
+
+## Pantry Helper v1
+
+| Method | Path                                       | Notes                                        |
+| ------ | ------------------------------------------ | -------------------------------------------- |
+| GET    | `/api/v1/pantry/households`                | Your households                              |
+| POST   | `/api/v1/pantry/households`                | `{ name }`; creates household and membership |
+| POST   | `/api/v1/pantry/households/join`           | `{ code }`; join by invite code              |
+| GET    | `/api/v1/pantry/households/:id/members`    | Members of a household you belong to         |
+| POST   | `/api/v1/pantry/households/:id/invites`    | New 7-day invite code                        |
+| DELETE | `/api/v1/pantry/households/:id/members/me` | Leave; deletes an empty household            |
+| POST   | `/api/v1/pantry/households/:id/sync`       | Row-level sync; `{ cursor, rows }`           |
+
+All pantry routes require a full DevDAJ account, never guests.

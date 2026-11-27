@@ -5,7 +5,7 @@ app (React, SSR) on Bun. The [Elysia](https://elysiajs.com) API is mounted at `/
 apps call the same server: `/api/v<version>/<app>/...`, e.g. `/api/v1/fitnexx/ai/chat`.
 
 ```bash
-cp apps/web/.env.example apps/web/.env
+cp .env.example .env
 vp run web#dev            # http://localhost:3001, API docs at /api/docs (not in production)
 vp run web#test
 vp run web#build && bun apps/web/server.ts   # production
@@ -60,7 +60,7 @@ src/
 
 1. `src/server/apps/<app>/v1/index.ts` exporting `new Elysia({ name: "<app>.v1", prefix: "/<app>" })`.
 2. `.use()` it in `src/server/v1.ts`.
-3. Add its `<APP>_*` variables to `.env.example`.
+3. Add its `<APP>_*` variables to the root `.env.example`.
 
 ### Versioning
 
@@ -161,4 +161,4 @@ the mobile clients are `apps/fitnexx/lib/ai.ts` and `lib/foodAnalysisQueue.ts`.
 
 All pantry routes require a full DevDAJ account, never guests. Recipe imports
 use `PANTRY_YOUTUBE_API_KEY` and the shared `OPENROUTER_API_KEY`; the fallback
-model comes from `PANTRY_RECIPE_MODEL` (see `apps/web/.env.example`).
+model comes from `PANTRY_RECIPE_MODEL` (see the root `.env.example`).

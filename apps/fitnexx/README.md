@@ -24,7 +24,7 @@ From the repo root:
 
 ```bash
 bun install
-cp apps/fitnexx/.env.example apps/fitnexx/.env
+cp .env.example .env
 vp run fitnexx#dev        # expo start
 vp run fitnexx#test       # unit tests (Vite+ / Vitest)
 vp check                  # lint, format, type check (whole repo)

@@ -26,9 +26,9 @@ bun run dev                 # website + API at http://localhost:3001
 bun run fitnexx             # Expo dev server for the Fitnexx mobile app
 ```
 
-Copy the `.env.example` of each app you run to `.env` first
-(`apps/web/.env.example`, `apps/fitnexx/.env.example`). Fitnexx sign-in, Pro
-and food analysis setup: [apps/fitnexx/docs/ai-setup.md](apps/fitnexx/docs/ai-setup.md).
+Copy the root `.env.example` to `.env` first. It covers every app. Fitnexx
+sign-in, Pro and food analysis setup:
+[apps/fitnexx/docs/ai-setup.md](apps/fitnexx/docs/ai-setup.md).
 
 ## How the repo is organised
 

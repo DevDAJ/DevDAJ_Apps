@@ -11,10 +11,10 @@ holds the accounts for every DevDAJ app. Set the project up once as described in
 `packages/auth/README.md` (Email, Google and Apple providers, and the redirect URL
 `fitnexx://auth-callback`), then:
 
-1. Copy `apps/fitnexx/.env.example` to `apps/fitnexx/.env` and set
-   `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` to the shared project.
-2. Copy `apps/web/.env.example` to `apps/web/.env` and set `SUPABASE_URL` and
-   `SUPABASE_ANON_KEY` to the same values.
+1. Copy the root `.env.example` to `.env` and set `SUPABASE_URL` and
+   `SUPABASE_ANON_KEY` to the shared project.
+2. Keep those values in the root `.env`; `EXPO_PUBLIC_SUPABASE_URL`,
+   `EXPO_PUBLIC_SUPABASE_ANON_KEY` and the `VITE_*` names expand from them.
 3. Guests (optional, on by default in the examples): set `EXPO_PUBLIC_AUTH_ALLOW_GUEST="true"` in
    the app and `FITNEXX_ALLOW_GUESTS="true"` on the API, and enable anonymous sign-ins and manual
    linking in Supabase. Guests get no food-analysis allowance (usage
@@ -36,7 +36,7 @@ enables row-level security, and creates the `consume_ai_rate_limit` function.
 See the `packages/db` README for reconciling a database set up by hand.
 
 The server uses the `SUPABASE_SERVICE_ROLE_KEY` (service role) to bypass RLS.
-Add it to `apps/web/.env` alongside `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
+Add it to the root `.env` alongside `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
 
 ## RevenueCat subscription
 

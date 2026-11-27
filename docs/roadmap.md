@@ -178,7 +178,8 @@ Targeted around the end of September; the largest app in the plan.
 multi-currency from the start (each account has a currency, totals convert to
 a home currency, MYR by default); tax relief categories and per-year limits
 are a server-hosted list, cached on the device; CSV and PDF statements both
-supported in the first import; first templates for Maybank, CIMB, Touch 'n Go
+supported in the first import; exchange rates from Bank Negara Malaysia's
+daily rates via the server; first templates for Maybank, CIMB, Touch 'n Go
 eWallet and GrabPay.
 
 **Core features:**
@@ -222,7 +223,11 @@ grocery spend, imported as transactions that point back to their source.
    log, signed-out by default.
 3. Accounts (each with a currency) and manual transactions with all six
    types; amounts stored as integer minor units with their currency code.
-4. Exchange rates and home-currency totals.
+4. Exchange rates and home-currency totals: the server fetches Bank Negara
+   Malaysia's published daily rates and serves the whole table (no per-user
+   query, so nothing about the user's currencies leaks); the device caches it
+   and works offline on the last copy. Each foreign transaction stores the
+   rate used, editable to the bank's actual rate, so history never shifts.
 5. Categories and budgets.
 6. Template engine: slot-only pattern matching as pure functions with tests
    (app-local, since templates are finance-specific).
@@ -242,7 +247,3 @@ grocery spend, imported as transactions that point back to their source.
 14. Imports from Garage and Pantry.
 15. Community template library: repository format, on-device scrubbing,
     sample tests, breakage detection; seeded with the step 7 templates.
-
-**Open question:** where exchange rates come from (a server endpoint caching
-a public daily rate, e.g. Bank Negara Malaysia, or rates entered per
-transaction).

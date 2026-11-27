@@ -53,8 +53,10 @@ if (await appData.has("fitnexx")) {
 
    `readsFrom` lists the apps whose data this one reads. Android 11+ hides other apps unless they are listed.
 
-3. **iOS:** create the app group `group.tech.devdaj.shared` once in the Apple Developer portal and
-   enable it on every app id. All apps must be under the same team.
+3. **iOS:** create the app group `group.tech.devdaj.shared` and enable the keychain access group
+   `tech.devdaj.shared` once in the Apple Developer portal, then enable both on every app id. The
+   plugin writes `$(AppIdentifierPrefix)tech.devdaj.shared` into the entitlements, and Xcode expands
+   the prefix at build time. All apps must be under the same team.
 4. **Android:** sign every DevDAJ app with the **same release key**. The permission is
    signature-level, so a differently signed app can neither read the data nor be installed
    next to one that declares the permission.
@@ -103,6 +105,55 @@ tables: `tx.write`, `tx.purge`, `tx.getFirst` and `tx.getAll` share the open
 transaction on the same connection, so all writes commit or roll back together.
 A `tx` handle used after its task finishes throws. Each table needs a single
 primary-key column. Remote operations are not applied yet (sync step 6).
+
+## Data key (`@devdaj/app-data/keys`)
+
+One random 32-byte data key per user, shared by every DevDAJ app. It is created only when the user
+first turns on export or sync. Wrapped copies live in `_devdaj_keys` in each app's shared `data.db`,
+so siblings can read them by design; the raw key never goes into that database.
+
+|         | Raw key                                                  | What siblings share                                 |
+| ------- | -------------------------------------------------------- | --------------------------------------------------- |
+| iOS     | Keychain access group `<TeamID>.tech.devdaj.shared`      | The same keychain entry, with no prompt             |
+| Android | Each app's own secure store (keystores cannot be shared) | Passphrase- and recovery-wrapped blobs in `data.db` |
+
+A newly installed sibling has no raw key: `status()` reports `locked`, and the app asks for the
+passphrase once. Blobs read from any database are validated before use, and the blob with the newest
+`updated_at` wins.
+
+Wire it up in the app, where every dependency is injected:
+
+```ts
+import { appData } from "@devdaj/app-data";
+import { createKeyManager } from "@devdaj/app-data/keys";
+import { createCrypto } from "@devdaj/crypto";
+import * as SecureStore from "expo-secure-store";
+import sodium from "react-native-libsodium";
+
+await sodium.ready;
+const options: SecureStore.SecureStoreOptions = {
+  keychainAccessGroup: appData.keychainGroup ?? undefined,
+  keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
+};
+const keys = createKeyManager({
+  crypto: createCrypto(sodium),
+  secrets: {
+    get: (name) => SecureStore.getItemAsync(name, options),
+    set: (name, value) => SecureStore.setItemAsync(name, value, options),
+    delete: (name) => SecureStore.deleteItemAsync(name, options),
+  },
+  ownDb: await appData.open(),
+  siblings: ["pantry", "garage"],
+  readSibling: (app, sql) => appData.query(app, sql),
+});
+```
+
+`AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY` keeps the key out of iCloud Keychain. The full keychain group
+is `$(AppIdentifierPrefix)tech.devdaj.shared`; enable it for **every app id** in the Apple Developer
+portal, like the app group, or siblings will not see the key.
+
+`setup(passphrase)` returns a recovery key to show once for printing. Never store it. Use
+`unlockWithPassphrase`, `unlockWithRecoveryKey` and `changePassphrase` for the rest.
 
 ## Development
 

@@ -14,6 +14,8 @@ export interface NativeAppData {
   appName: string | null;
   /** iOS: the app group container. Android: `<files>/devdaj`. Null when the plugin isn't applied. */
   appsDirectory: string | null;
+  /** iOS: the expanded keychain access group. Null on Android or without the plugin. */
+  keychainGroup?: string | null;
   /** Whether `<apps folder>/<app>/data.db` exists (iOS: any app; Android: this app only). */
   databaseExists(app: string): boolean;
   /** Android only: query another app's database through its ContentProvider. */
@@ -44,6 +46,8 @@ export interface AppData {
   readonly app: string | null;
   /** True once the native module and config plugin are in this build. */
   readonly configured: boolean;
+  /** iOS: the expanded keychain access group for the raw data key. Null elsewhere. */
+  readonly keychainGroup: string | null;
   /**
    * This app's own database (read/write), at `<apps folder>/<app>/data.db`, in WAL mode.
    * Other apps can read it, so keep anything private out or in a separate database.
@@ -128,6 +132,7 @@ export function createAppData({ native, platform, open }: Deps): AppData {
   return {
     app,
     configured: app !== null && directory !== null,
+    keychainGroup: platform === "ios" ? (native?.keychainGroup ?? null) : null,
     open: openOwn,
 
     async query<T extends Row = Row>(target: string, sql: string, params: SqlValue[] = []) {

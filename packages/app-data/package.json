@@ -13,6 +13,7 @@
     "./shared": "./src/shared.ts",
     "./changelog": "./src/changelog.ts",
     "./writer": "./src/writer.ts",
+    "./keys": "./src/keys.ts",
     "./app.plugin.js": "./app.plugin.js",
     "./package.json": "./package.json"
   },
@@ -21,9 +22,11 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@devdaj/crypto": "workspace:*",
     "@types/node": "^24",
     "expo": "~57.0.20",
     "expo-sqlite": "~57.0.5",
+    "libsodium-wrappers-sumo": "0.8.4",
     "typescript": "^7.0.2",
     "vite-plus": "catalog:"
   },

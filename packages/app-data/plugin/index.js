@@ -10,6 +10,9 @@ const {
 // Keep in sync with src/shared.ts (a test checks this).
 const APP_ID_PREFIX = "tech.devdaj.app";
 const APP_GROUP = "group.tech.devdaj.shared";
+const KEYCHAIN_GROUP = "tech.devdaj.shared";
+const KEYCHAIN_GROUP_FULL = `$(AppIdentifierPrefix)${KEYCHAIN_GROUP}`;
+const OWN_KEYCHAIN_GROUP = "$(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)";
 const AUTHORITY_SUFFIX = ".appdata";
 const META_APP_NAME = "tech.devdaj.appdata.APP_NAME";
 const APP_NAME = /^[a-z][a-z0-9_]{0,63}$/;
@@ -52,6 +55,16 @@ function applyEntitlements(entitlements) {
   const key = "com.apple.security.application-groups";
   const groups = Array.isArray(entitlements[key]) ? entitlements[key] : [];
   entitlements[key] = groups.includes(APP_GROUP) ? groups : [...groups, APP_GROUP];
+
+  // The first keychain group is where new items go by default, so the app's own group stays
+  // first: only the data key is written to the shared group, explicitly.
+  const keychainKey = "keychain-access-groups";
+  const keychainGroups = Array.isArray(entitlements[keychainKey])
+    ? [...entitlements[keychainKey]]
+    : [];
+  if (keychainGroups.length === 0) keychainGroups.push(OWN_KEYCHAIN_GROUP);
+  if (!keychainGroups.includes(KEYCHAIN_GROUP_FULL)) keychainGroups.push(KEYCHAIN_GROUP_FULL);
+  entitlements[keychainKey] = keychainGroups;
   return entitlements;
 }
 
@@ -59,6 +72,7 @@ function applyEntitlements(entitlements) {
 function applyInfoPlist(infoPlist, app) {
   infoPlist.DevdajAppName = app;
   infoPlist.DevdajAppGroup = APP_GROUP;
+  infoPlist.DevdajKeychainGroup = KEYCHAIN_GROUP_FULL;
   return infoPlist;
 }
 
@@ -117,6 +131,9 @@ module.exports = Object.assign(createRunOncePlugin(withAppData, "@devdaj/app-dat
   internal: {
     APP_ID_PREFIX,
     APP_GROUP,
+    KEYCHAIN_GROUP,
+    KEYCHAIN_GROUP_FULL,
+    OWN_KEYCHAIN_GROUP,
     AUTHORITY_SUFFIX,
     validate,
     checkId,

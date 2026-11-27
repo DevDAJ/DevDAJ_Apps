@@ -461,3 +461,45 @@ bullets from templates, with an optional model rewrite opted into per bullet.
    editable before saving.
 7. Review filters.
 8. "Your data" screen and encrypted export on the shared logic.
+
+### 10. Wardrobe and outfit planner (new)
+
+A clothing catalog, outfit builder, wear log, cost per wear and rule-based
+outfit suggestions.
+
+**Core features:**
+
+- Catalog: photo, category, colours, formality (1 to 5), warmth, price and
+  purchase date. Dominant colours are suggested from the photo by plain
+  code; the user confirms.
+- Outfit builder from catalog items.
+- Wear log (append-only): which outfit or items on which day.
+- Cost per wear: price divided by times worn, and items not worn in months.
+- Rule-based suggestions: colour rules (neutrals go with anything, limits on
+  clashing hues), formality matched to the occasion, warmth matched to the
+  day's weather, recently worn items pushed down.
+
+**Sibling links (read and import):** clothing purchases imported from Ledger
+to fill price and purchase date.
+
+**Planned, in commit-sized steps:**
+
+1. App scaffold with `@devdaj/app-data`, schema, `public_v1_*` views, change
+   log, signed-out by default.
+2. Catalog with photos on the shared attachment service.
+3. Photo colour extraction as pure functions with tests.
+4. Outfit builder.
+5. Wear log and cost per wear.
+6. Suggestion rules as pure functions with tests.
+7. Weather for the suggestions.
+8. Import purchases from Ledger.
+9. "Your data" screen and encrypted export on the shared logic.
+
+**Open questions:**
+
+- App name (it sets the `tech.devdaj.app.<name>` id).
+- Weather source: the phone calls a free forecast service directly with a
+  coarse location, or the server proxies it so the provider never sees the
+  user's IP address?
+- Optional model tagging of new item photos (category, colour, formality),
+  opt-in per photo, or plain code and manual tags only?

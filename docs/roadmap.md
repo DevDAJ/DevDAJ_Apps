@@ -127,10 +127,15 @@ Data lives in AsyncStorage and syncs as plaintext rows through
 removing members, a member losing their device, key rotation after removal).
 Until it lands, today's plaintext household sync stays as is.
 
-### 3. Vehicle log (new)
+### 3. Garage: vehicle log (new)
 
 Service intervals, fuel economy, renewals and an odometer forecast. Built
 together with the shared recurrence engine, which it is the first user of.
+
+**Decisions (2026-11-27):** named Garage (`tech.devdaj.app.garage`); cars
+and motorcycles, with the vehicle type picking starter templates; fuel economy
+stored as litres and km, shown as km/L by default and switchable to L/100 km;
+a small editable starter list of service templates per vehicle type.
 
 **Core features:**
 
@@ -156,16 +161,9 @@ the document vault's travel and expiry checks.
    log, signed-out by default.
 3. Vehicles and odometer readings.
 4. Fuel log and economy.
-5. Service items, records and due status.
+5. Service items, records and due status, with starter templates per
+   vehicle type.
 6. Odometer forecast feeding due dates.
 7. Road tax and insurance renewals.
 8. Local notifications from the recurrence engine.
 9. "Your data" screen and encrypted export on the shared logic.
-
-**Open questions:**
-
-- App name (it sets the `tech.devdaj.app.<name>` id).
-- Economy unit: km/L, L/100 km, or user's choice?
-- Starter service templates (oil, tyres, battery, brake fluid) as a generic
-  list, or user-built only?
-- Cars only, or motorcycles too (different default intervals)?

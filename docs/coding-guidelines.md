@@ -71,7 +71,7 @@ guidelines explain what "matching" means here.
   `POSTHOG_HOST`. Mobile public values: `EXPO_PUBLIC_*`; browser: `VITE_*`.
 - Secrets stay server-side. Never hardcode keys, never log sensitive data,
   never put service-role or provider keys in mobile/browser env.
-- Every new variable gets a commented entry in the app's `.env.example`.
+- Every new variable gets a commented entry in the root `.env.example`.
 
 ## Telemetry
 

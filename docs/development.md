@@ -12,8 +12,7 @@
 
 ```bash
 bun install                              # installs every workspace, runs vp config
-cp apps/web/.env.example apps/web/.env   # API + website + admin
-cp apps/fitnexx/.env.example apps/fitnexx/.env   # mobile app
+cp .env.example .env                     # one file for every app: shared values, API, AI and app config
 ```
 
 Fill in the shared Supabase project values (`packages/auth/README.md` has the

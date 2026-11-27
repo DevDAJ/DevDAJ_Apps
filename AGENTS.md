@@ -54,7 +54,7 @@ vp run <workspace>#<script>  # e.g. vp run web#test, vp run web#typecheck
    remove. Secrets stay out of the shared database and out of client env.
 8. **No secrets in code, logs or commits.** Server app config uses `<APP>_`
    prefixes via `env.ts`; mobile public values `EXPO_PUBLIC_*`; browser
-   `VITE_*`. New vars get a commented `.env.example` entry.
+   `VITE_*`. New vars get a commented entry in the root `.env.example`.
 9. **Formatting**: the vp formatter is authoritative. No em dashes anywhere
    in generated content (code comments, docs, commit messages), and no
    double-dash substitutes; use commas, colons, semicolons or parentheses.

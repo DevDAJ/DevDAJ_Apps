@@ -21,7 +21,7 @@ From the repo root:
 
 ```bash
 bun install
-cp apps/pantry/.env.example apps/pantry/.env
+cp .env.example .env
 vp run pantry#dev        # expo start
 bun run pantry           # same dev server
 vp run pantry#test       # unit tests (Vite+ / Vitest)
@@ -41,8 +41,9 @@ responses are never cached, and signed-out web users are sent to the same email 
 screens.
 
 For local web development, run `vp run pantry#dev` from the repo root, then press `w`, or run
-`bun run --cwd apps/pantry web`. The app opens at `http://localhost:8081/pantry/app`.
+`bun run --cwd apps/pantry web`. The dev server serves the app at `http://localhost:8081/`; the `/pantry/app/` base path applies to the exported build only.
 
-CORS is only needed when the web app runs on a different origin than the API. In that case add the
-web origin to `API_CORS_ORIGINS` in `apps/web/.env` and set `EXPO_PUBLIC_API_URL` to the API origin
+CORS is only needed when the web app runs on a different origin than the API. The example
+`API_CORS_ORIGINS` already allows local Expo web on `http://localhost:8081`. For another origin,
+add it to `API_CORS_ORIGINS` in the root `.env` and set `EXPO_PUBLIC_API_URL` to the API origin
 before building.

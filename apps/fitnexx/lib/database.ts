@@ -1,9 +1,19 @@
 import { appData } from "@devdaj/app-data";
+import { openWriter, type Writer } from "@devdaj/app-data/writer";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Crypto from "expo-crypto";
 import { openDatabaseAsync } from "expo-sqlite";
 import { KEYS } from "./backupSchema";
 import { copyLegacyShared, createPublisher, migratePublic, type PublicChange } from "./publicData";
-import { createSharedData, type Db, migrate, SHARED_KEYS, type SharedSnapshot } from "./sharedData";
+import {
+  baselineIfEmpty,
+  createSharedData,
+  type Db,
+  migrate,
+  PRIVATE_KEYS,
+  SHARED_KEYS,
+  type SharedSnapshot,
+} from "./sharedData";
 
 /** Set once the AsyncStorage data from older versions has been copied into SQLite. */
 const LEGACY_IMPORTED_KEY = "fitnexx_sqlite_imported";
@@ -11,6 +21,7 @@ const LEGACY_IMPORTED_KEY = "fitnexx_sqlite_imported";
 interface Databases {
   privateDb: Db;
   publicDb: Db | null;
+  writer: Writer;
 }
 
 let opening: Promise<Databases> | null = null;
@@ -28,12 +39,17 @@ function getDatabases(): Promise<Databases> {
       await migrate(privateDb);
 
       const publicDb = appData.configured ? ((await appData.open()) as Db) : null;
-      if (publicDb) {
-        await copyLegacyShared(publicDb, privateDb);
-        await migratePublic(publicDb);
-      }
+      if (publicDb) await copyLegacyShared(publicDb, privateDb);
 
-      opened = { privateDb, publicDb };
+      const writer = await openWriter(privateDb, {
+        app: "fitnexx",
+        keys: PRIVATE_KEYS,
+        newDeviceId: () => Crypto.randomUUID().replaceAll("-", ""),
+      });
+      await baselineIfEmpty(writer);
+      if (publicDb) await migratePublic(publicDb);
+
+      opened = { privateDb, publicDb, writer };
       // Self-heals summaries a failed refresh left stale; never blocks opening the app's data.
       await publisher.rebuildAll().catch(warnRefreshFailed);
       return opened;
@@ -59,10 +75,15 @@ const publish = (change: PublicChange) => {
   publisher.apply(change).catch(warnRefreshFailed);
 };
 
+const getWriter = async (): Promise<{ db: Db; writer: Writer }> => {
+  const databases = opened ?? (await getDatabases());
+  return { db: databases.privateDb, writer: databases.writer };
+};
+
 export const sharedData = createSharedData(async () => {
-  const db = await getPrivate();
+  const state = await getWriter();
   await importLegacyOnce();
-  return db;
+  return state;
 }, publish);
 
 let importing: Promise<void> | null = null;
@@ -100,4 +121,4 @@ function importLegacyOnce(): Promise<void> {
 }
 
 const rawImport = (legacy: Partial<SharedSnapshot>) =>
-  createSharedData(getPrivate, publish).importLegacy(legacy);
+  createSharedData(getWriter, publish).importLegacy(legacy);

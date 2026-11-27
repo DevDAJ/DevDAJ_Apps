@@ -8,7 +8,7 @@
  *
  * For breaking changes add a public_v2_* view beside them; never edit a published view.
  */
-import type { Db } from "./sharedData";
+import { exerciseRowId, setRowId, type Db } from "./sharedData";
 import { dayKey } from "./streak";
 
 /** The published public summary schema version. */
@@ -120,11 +120,21 @@ export async function copyLegacyShared(from: Db, to: Db): Promise<boolean> {
 
   await to.withTransactionAsync(async () => {
     for (const { name, columns, rows } of tables) {
-      const placeholders = columns.map(() => "?").join(", ");
+      const needsId = name === "workout_exercises" || name === "workout_sets";
+      const insertColumns = needsId ? ["id", ...columns] : columns;
+      const placeholders = insertColumns.map(() => "?").join(", ");
       for (const row of rows) {
+        const values: SqlValue[] = columns.map((column) => row[column] ?? null);
+        if (name === "workout_exercises") {
+          values.unshift(exerciseRowId(String(row.workout_id), Number(row.position)));
+        } else if (name === "workout_sets") {
+          values.unshift(
+            setRowId(String(row.workout_id), Number(row.exercise_position), Number(row.position)),
+          );
+        }
         await to.runAsync(
-          `INSERT OR REPLACE INTO ${name} (${columns.join(", ")}) VALUES (${placeholders})`,
-          columns.map((column) => row[column] ?? null),
+          `INSERT OR REPLACE INTO ${name} (${insertColumns.join(", ")}) VALUES (${placeholders})`,
+          values,
         );
       }
     }

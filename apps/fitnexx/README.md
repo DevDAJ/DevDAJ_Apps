@@ -46,8 +46,9 @@ live in a private SQLite database (`fitnexx-data.db`, tables in
 refreshes three summary views in its shared [`@devdaj/app-data`](../../packages/app-data/README.md)
 database: `public_v1_workouts`, `public_v1_daily_nutrition` and `public_v1_body_weight`
 (columns in [`lib/publicData.ts`](lib/publicData.ts)). Never edit a published view; add a
-`public_v2_*` view beside it. Installs from before this change copy their old shared tables
-into the private database once, then the shared copies are dropped.
+`public_v2_*` view beside it. Every change to the private database goes through
+`@devdaj/app-data`'s writer, which records it in a change log for sync. Installs from before this
+change copy their old shared tables into the private database once, then the shared copies are dropped.
 
 Templates, schedule, gyms (they include locations), reminders, Pro status, AI settings and sync
 secrets stay private in AsyncStorage. Data from older versions is copied into SQLite once, on

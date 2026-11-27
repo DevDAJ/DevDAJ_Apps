@@ -167,3 +167,76 @@ the document vault's travel and expiry checks.
 7. Road tax and insurance renewals.
 8. Local notifications from the recurrence engine.
 9. "Your data" screen and encrypted export on the shared logic.
+
+### 4. Finance tracker (new)
+
+Transactions, budgets, Malaysian tax relief tracking and a year-end export,
+with transactions captured from bank and wallet notifications on Android.
+Targeted around the end of September; the largest app in the plan.
+
+**Core features:**
+
+- Accounts and transactions typed money in, money out, transfer, declined,
+  reversed or refunded.
+- Budgets per category and period.
+- Tax relief categories with limits stored per assessment year (LHDN), and a
+  year-end export.
+- **Notification capture (Android):** the user picks which banking and wallet
+  apps to watch; nothing else is read and one-time passcodes are always
+  discarded. A template is app + text pattern with named slots (amount,
+  merchant, account, date, reference) + a fixed type; the template sets the
+  direction, nothing is guessed. Users build templates by tapping the amount
+  and merchant in a captured notification. Unmatched notifications wait in a
+  "no template yet" inbox. Bank SMS arrive through the messaging app's
+  notifications, never the SMS permission.
+- **Photos:** receipt mode (money out, default) or invoice mode (money in).
+  Invoices are expected income until matched to an incoming notification,
+  with overdue reminders.
+- **Matching:** one payment seen by bank, wallet and receipt links into one
+  transaction; own-account transfers (wallet top-ups) pair up.
+- **Monthly statement import** for reconciliation.
+- **iOS fallback:** share or paste notification text into the same template
+  engine, plus statement import.
+- **Community templates:** a public, versioned library of slot-only patterns
+  (cannot run code), each with test samples that must pass; samples scrubbed
+  of amounts, names and account digits on the device before sharing; breakage
+  detection when a bank changes its wording.
+
+**Sibling links (read and import):** Garage fuel and service costs, and Pantry
+grocery spend, imported as transactions that point back to their source.
+
+**Planned, in commit-sized steps:**
+
+1. Spike first, as the riskiest piece: an app-local Expo native module with a
+   `NotificationListenerService`, an app allowlist and passcode discard,
+   proving capture works on a real device. Confirm the current Google Play
+   policy for notification access before going further.
+2. App scaffold with `@devdaj/app-data`, schema, `public_v1_*` views, change
+   log, signed-out by default.
+3. Accounts and manual transactions with all six types.
+4. Categories and budgets.
+5. Template engine: slot-only pattern matching as pure functions with tests
+   (app-local, since templates are finance-specific).
+6. Capture inbox and the tap-to-build template editor.
+7. Duplicate linking and own-account transfer pairing.
+8. Tax relief categories, per-year limits and the year-end export.
+9. Receipt and invoice photos on the shared attachment service, through the
+   import pipeline (parser first, model fallback, line items must sum to the
+   total, user confirms, cached by image hash).
+10. Invoices as expected income, matching and overdue reminders (recurrence
+    engine).
+11. Statement import and reconciliation.
+12. iOS share and paste fallback.
+13. Imports from Garage and Pantry.
+14. Community template library: repository format, on-device scrubbing,
+    sample tests, breakage detection.
+
+**Open questions:**
+
+- App name (it sets the `tech.devdaj.app.<name>` id).
+- Currency: MYR only, or multi-currency accounts?
+- Tax relief limits per assessment year: shipped in the app, or a
+  server-hosted list like Pantry's ingredient catalog?
+- Statement formats to support first: CSV, PDF, or both (most Malaysian banks
+  issue PDF)?
+- Which banks and wallets to target first for templates?

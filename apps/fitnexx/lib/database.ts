@@ -1,44 +1,69 @@
 import { appData } from "@devdaj/app-data";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { openDatabaseAsync, type SQLiteDatabase } from "expo-sqlite";
+import { openDatabaseAsync } from "expo-sqlite";
 import { KEYS } from "./backupSchema";
+import { copyLegacyShared, createPublisher, migratePublic, type PublicChange } from "./publicData";
 import { createSharedData, type Db, migrate, SHARED_KEYS, type SharedSnapshot } from "./sharedData";
 
 /** Set once the AsyncStorage data from older versions has been copied into SQLite. */
 const LEGACY_IMPORTED_KEY = "fitnexx_sqlite_imported";
 
-let opening: Promise<SQLiteDatabase> | null = null;
+interface Databases {
+  privateDb: Db;
+  publicDb: Db | null;
+}
+
+let opening: Promise<Databases> | null = null;
+let opened: Databases | null = null;
 
 /**
- * The shared database (`<app group>/fitnexx/data.db`). Builds without the native module
- * (Expo Go) fall back to a private database with the same tables, so the app still works;
- * other apps just can't see it.
+ * Opens the private database first, then publishes into the shared `data.db` when configured.
+ * Old v1 detail rows are copied to the private database before the public tables are replaced.
  */
-function getDatabase(): Promise<SQLiteDatabase> {
+function getDatabases(): Promise<Databases> {
   if (!opening) {
     opening = (async () => {
-      let db: SQLiteDatabase;
-      if (appData.configured) {
-        db = await appData.open();
-      } else {
-        db = await openDatabaseAsync("fitnexx-data.db");
-        await db.execAsync("PRAGMA journal_mode = WAL;");
+      const privateDb = (await openDatabaseAsync("fitnexx-data.db")) as Db;
+      await privateDb.execAsync("PRAGMA journal_mode = WAL;");
+      await migrate(privateDb);
+
+      const publicDb = appData.configured ? ((await appData.open()) as Db) : null;
+      if (publicDb) {
+        await copyLegacyShared(publicDb, privateDb);
+        await migratePublic(publicDb);
       }
-      await migrate(db as Db);
-      return db;
+
+      opened = { privateDb, publicDb };
+      // Self-heals summaries a failed refresh left stale; never blocks opening the app's data.
+      await publisher.rebuildAll().catch(warnRefreshFailed);
+      return opened;
     })();
     opening.catch(() => {
+      opened = null;
       opening = null;
     });
   }
   return opening;
 }
 
+const getPrivate = async (): Promise<Db> => (opened ?? (await getDatabases())).privateDb;
+const getPublic = async (): Promise<Db | null> => (opened ?? (await getDatabases())).publicDb;
+
+const publisher = createPublisher(getPrivate, getPublic);
+
+const warnRefreshFailed = (error: unknown) =>
+  console.warn("Fitnexx public summary refresh failed", error);
+
+// shortcut: a failed refresh leaves the public summary stale until the next launch rebuild; surface it in telemetry if it happens.
+const publish = (change: PublicChange) => {
+  publisher.apply(change).catch(warnRefreshFailed);
+};
+
 export const sharedData = createSharedData(async () => {
-  const db = (await getDatabase()) as Db;
+  const db = await getPrivate();
   await importLegacyOnce();
   return db;
-});
+}, publish);
 
 let importing: Promise<void> | null = null;
 
@@ -75,4 +100,4 @@ function importLegacyOnce(): Promise<void> {
 }
 
 const rawImport = (legacy: Partial<SharedSnapshot>) =>
-  createSharedData(async () => (await getDatabase()) as Db).importLegacy(legacy);
+  createSharedData(getPrivate, publish).importLegacy(legacy);

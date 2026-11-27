@@ -41,9 +41,13 @@ which builds a signed AAB/APK and attaches them to a GitHub release.
 ## Data shared with other DevDAJ apps
 
 Workouts (with exercises and sets), meals, body metrics, water, weight unit and calorie goal
-live in SQLite through [`@devdaj/app-data`](../../packages/app-data/README.md), so other DevDAJ
-apps can read them. The tables are listed in [`lib/sharedData.ts`](lib/sharedData.ts). Treat
-them as a public API: add columns, never rename or remove them.
+live in a private SQLite database (`fitnexx-data.db`, tables in
+[`lib/sharedData.ts`](lib/sharedData.ts)) that other apps cannot read. After each change Fitnexx
+refreshes three summary views in its shared [`@devdaj/app-data`](../../packages/app-data/README.md)
+database: `public_v1_workouts`, `public_v1_daily_nutrition` and `public_v1_body_weight`
+(columns in [`lib/publicData.ts`](lib/publicData.ts)). Never edit a published view; add a
+`public_v2_*` view beside it. Installs from before this change copy their old shared tables
+into the private database once, then the shared copies are dropped.
 
 Templates, schedule, gyms (they include locations), reminders, Pro status, AI settings and sync
 secrets stay private in AsyncStorage. Data from older versions is copied into SQLite once, on

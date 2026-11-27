@@ -1,7 +1,9 @@
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, test } from "vite-plus/test";
 import { KEYS } from "./backupSchema";
+import type { PublicChange } from "./publicData";
 import { createSharedData, type Db, migrate, splitKeyedData } from "./sharedData";
+import { dayKey } from "./streak";
 import type { BodyMetrics, Meal, Workout } from "./types";
 
 /** expo-sqlite's async API over Node's built-in SQLite, so the real SQL runs in tests. */
@@ -191,6 +193,85 @@ describe("shared SQLite data", () => {
     await data.importLegacy({ meals: [meal], dailyCalorieGoal: undefined });
     expect(await data.getMeals()).toEqual([meal]);
     expect(await data.getWeightUnit()).toBe("lbs");
+  });
+});
+
+describe("public change notifications", () => {
+  async function tracked() {
+    const db = nodeDb();
+    await migrate(db);
+    const changes: PublicChange[] = [];
+    const data = createSharedData(
+      async () => db,
+      (change) => {
+        changes.push(change);
+      },
+    );
+    return { db, data, changes };
+  }
+
+  test("saveMeal reports the meal's local day", async () => {
+    const { data, changes } = await tracked();
+    await data.saveMeal(meal);
+    expect(changes).toEqual([{ mealDays: [dayKey(new Date(meal.date))] }]);
+  });
+
+  test("updateMeal reports both the old and the merged local day", async () => {
+    const { data, changes } = await tracked();
+    await data.saveMeal(meal);
+    changes.length = 0;
+    const date = new Date(2026, 10, 19, 12).toISOString();
+    await data.updateMeal(meal.id, { date });
+    expect(changes).toEqual([{ mealDays: [dayKey(new Date(meal.date)), dayKey(new Date(date))] }]);
+  });
+
+  test("deleteMeal reports the deleted meal's local day, missing ids report nothing", async () => {
+    const { data, changes } = await tracked();
+    await data.saveMeal(meal);
+    changes.length = 0;
+    await data.deleteMeal(meal.id);
+    expect(changes).toEqual([{ mealDays: [dayKey(new Date(meal.date))] }]);
+    changes.length = 0;
+    await data.deleteMeal("missing");
+    expect(changes).toEqual([]);
+  });
+
+  test("saveWorkout reports the id", async () => {
+    const { data, changes } = await tracked();
+    await data.saveWorkout(workout);
+    expect(changes).toEqual([{ workouts: [workout.id] }]);
+  });
+
+  test("saveBodyMetrics reports the metrics' local day", async () => {
+    const { data, changes } = await tracked();
+    await data.saveBodyMetrics(metrics);
+    expect(changes).toEqual([{ weightDays: [dayKey(new Date(metrics.date))] }]);
+  });
+
+  test("replaceAll reports a full rebuild", async () => {
+    const { data, changes } = await tracked();
+    await data.replaceAll({
+      workouts: [workout],
+      meals: [meal],
+      bodyMetrics: [metrics],
+      waterLog: {},
+      weightUnit: "kg",
+      dailyCalorieGoal: null,
+    });
+    expect(changes).toEqual([{ all: true }]);
+  });
+
+  test("a throwing onChange does not reject the write", async () => {
+    const db = nodeDb();
+    await migrate(db);
+    const data = createSharedData(
+      async () => db,
+      () => {
+        throw new Error("notify failed");
+      },
+    );
+    await expect(data.saveMeal(meal)).resolves.toBeUndefined();
+    expect((await data.getMeals()).map((m) => m.id)).toEqual([meal.id]);
   });
 });
 

@@ -1,13 +1,13 @@
 import { KEYS } from "./backupSchema";
+import type { PublicChange } from "./publicData";
+import { dayKey } from "./streak";
 import type { BodyMetrics, Meal, PrType, SetType, WeightUnit, Workout, WorkoutSet } from "./types";
 
 /**
- * Fitnexx's shareable data lives in SQLite (`@devdaj/app-data`), where other DevDAJ apps can
- * read it. Private data (gyms with their locations, templates, reminders, AI keys, sync
- * secrets) stays in AsyncStorage.
- *
- * Other apps query these tables directly, so treat them as a public API: add columns or
- * tables, never rename or remove them.
+ * This database is PRIVATE to Fitnexx (`fitnexx-data.db`); siblings cannot read it. Siblings read
+ * only the three public summary views defined in `publicData.ts` from the shared `data.db`.
+ * Other private data (gyms with their locations, templates, reminders, AI keys, sync secrets)
+ * stays in AsyncStorage.
  *
  * meals          id, date, name, calories, protein, carbs, fat, image_uri
  * workouts       id, date, title, duration, total_volume
@@ -345,16 +345,31 @@ DELETE FROM workout_sets; DELETE FROM workout_exercises; DELETE FROM workouts;
 DELETE FROM meals; DELETE FROM body_metrics; DELETE FROM water_log; DELETE FROM preferences;
 `;
 
-export function createSharedData(getDb: () => Promise<Db>) {
+export function createSharedData(
+  getDb: () => Promise<Db>,
+  onChange?: (change: PublicChange) => void,
+) {
   // One write at a time: transactions on a shared connection must not interleave.
   let queue: Promise<unknown> = Promise.resolve();
-  const write = <T>(task: (db: Db) => Promise<T>): Promise<T> => {
+  const write = <T>(
+    task: (db: Db) => Promise<T>,
+    change?: (result: T) => PublicChange | undefined,
+  ): Promise<T> => {
     const run = queue.then(async () => {
       const db = await getDb();
       let result!: T;
       await db.withTransactionAsync(async () => {
         result = await task(db);
       });
+      if (onChange && change) {
+        try {
+          const value = change(result);
+          if (value) onChange(value);
+        } catch (error) {
+          // Notification is best effort: a failed refresh never fails the private write.
+          console.warn("Fitnexx public change notification failed", error);
+        }
+      }
       return result;
     });
     queue = run.catch(() => undefined);
@@ -418,20 +433,48 @@ export function createSharedData(getDb: () => Promise<Db>) {
 
   return {
     getWorkouts,
-    saveWorkout: (workout: Workout) => write((db) => writeWorkout(db, workout)),
+    saveWorkout: (workout: Workout) =>
+      write(
+        (db) => writeWorkout(db, workout),
+        () => ({ workouts: [workout.id] }),
+      ),
     deleteWorkout: (id: string) =>
-      write((db) => db.runAsync("DELETE FROM workouts WHERE id = ?", [id]).then(() => {})),
+      write(
+        (db) => db.runAsync("DELETE FROM workouts WHERE id = ?", [id]).then(() => {}),
+        () => ({ workouts: [id] }),
+      ),
 
     getMeals,
-    saveMeal: (meal: Meal) => write((db) => writeMeal(db, meal)),
+    saveMeal: (meal: Meal) =>
+      write(
+        (db) => writeMeal(db, meal),
+        () => ({ mealDays: [dayKey(new Date(meal.date))] }),
+      ),
     async updateMeal(id: string, updates: Partial<Meal>): Promise<void> {
-      await write(async (db) => {
-        const row = await db.getFirstAsync<MealRow>("SELECT * FROM meals WHERE id = ?", [id]);
-        if (row) await writeMeal(db, { ...toMeal(row), ...updates, id });
-      });
+      await write(
+        async (db) => {
+          const row = await db.getFirstAsync<MealRow>("SELECT * FROM meals WHERE id = ?", [id]);
+          if (!row) return undefined;
+          const merged = { ...toMeal(row), ...updates, id };
+          const days = [dayKey(new Date(row.date)), dayKey(new Date(merged.date))];
+          await writeMeal(db, merged);
+          return days;
+        },
+        (days) => (days ? { mealDays: days } : undefined),
+      );
     },
     deleteMeal: (id: string) =>
-      write((db) => db.runAsync("DELETE FROM meals WHERE id = ?", [id]).then(() => {})),
+      write(
+        async (db) => {
+          const row = await db.getFirstAsync<{ date: string }>(
+            "SELECT date FROM meals WHERE id = ?",
+            [id],
+          );
+          await db.runAsync("DELETE FROM meals WHERE id = ?", [id]);
+          return row?.date;
+        },
+        (date) => (date ? { mealDays: [dayKey(new Date(date))] } : undefined),
+      ).then(() => {}),
 
     getBodyMetrics: () =>
       read(async (db) =>
@@ -439,7 +482,11 @@ export function createSharedData(getDb: () => Promise<Db>) {
           toBodyMetrics,
         ),
       ),
-    saveBodyMetrics: (metrics: BodyMetrics) => write((db) => writeBodyMetrics(db, metrics)),
+    saveBodyMetrics: (metrics: BodyMetrics) =>
+      write(
+        (db) => writeBodyMetrics(db, metrics),
+        () => ({ weightDays: [dayKey(new Date(metrics.date))] }),
+      ),
 
     getWaterLog: () =>
       read(async (db) => {
@@ -464,25 +511,35 @@ export function createSharedData(getDb: () => Promise<Db>) {
 
     /** Replaces everything (backup restore, LAN sync) in one transaction. */
     replaceAll: (data: SharedSnapshot) =>
-      write(async (db) => {
-        await db.execAsync(CLEAR_ALL);
-        await writeSnapshot(db, data);
-      }),
+      write(
+        async (db) => {
+          await db.execAsync(CLEAR_ALL);
+          await writeSnapshot(db, data);
+        },
+        () => ({ all: true }),
+      ),
 
-    clearAll: () => write((db) => db.execAsync(CLEAR_ALL)),
+    clearAll: () =>
+      write(
+        (db) => db.execAsync(CLEAR_ALL),
+        () => ({ all: true }),
+      ),
 
     /** One-time import of data saved by versions that kept everything in AsyncStorage. */
     importLegacy: (data: Partial<SharedSnapshot>) =>
-      write(async (db) => {
-        for (const workout of data.workouts ?? []) await writeWorkout(db, workout);
-        for (const meal of data.meals ?? []) await writeMeal(db, meal);
-        for (const metrics of data.bodyMetrics ?? []) await writeBodyMetrics(db, metrics);
-        if (data.waterLog) await writeWaterLog(db, data.waterLog);
-        if (data.weightUnit) await writePreference(db, "weight_unit", data.weightUnit);
-        if (data.dailyCalorieGoal !== undefined) {
-          await writePreference(db, "daily_calorie_goal", data.dailyCalorieGoal);
-        }
-      }),
+      write(
+        async (db) => {
+          for (const workout of data.workouts ?? []) await writeWorkout(db, workout);
+          for (const meal of data.meals ?? []) await writeMeal(db, meal);
+          for (const metrics of data.bodyMetrics ?? []) await writeBodyMetrics(db, metrics);
+          if (data.waterLog) await writeWaterLog(db, data.waterLog);
+          if (data.weightUnit) await writePreference(db, "weight_unit", data.weightUnit);
+          if (data.dailyCalorieGoal !== undefined) {
+            await writePreference(db, "daily_calorie_goal", data.dailyCalorieGoal);
+          }
+        },
+        () => ({ all: true }),
+      ),
   };
 }
 

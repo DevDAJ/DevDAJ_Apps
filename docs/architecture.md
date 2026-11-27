@@ -15,7 +15,8 @@ Privacy-first, local-first phone apps around one shared backend:
 
 ```text
 apps/fitnexx (Expo)  ──┐
-apps/<future app>    ──┼──> apps/web API (/api/v1/...) ──> Supabase (one project)
+apps/pantry (Expo)   ──┼──> apps/web API (/api/v1/...) ──> Supabase (one project)
+apps/<future app>    ──┤         │
 apps/web (browser)   ──┘         │
                                  └──> OpenRouter (all AI, LangChain)
 packages/auth       shared headless login (core + React context/hook binding)
@@ -40,6 +41,9 @@ UI belongs in the app.
 | Shared SQLite (`app-data`) | Workouts, meals, metrics, water, gyms: data other apps read                            | Public API: add columns, never rename or remove; no secrets         |
 | Private AsyncStorage       | Templates, settings, reminders, Pro cache, sync secrets, AI settings/usage, food queue | Device-local; the food queue is excluded from backups and peer sync |
 | Supabase (server)          | Accounts, entitlements, bug reports, food scans, component library, dataset, metrics   | RLS enabled; clients never touch service-role tables directly       |
+
+Pantry Helper keeps recipes, pantry items and grocery lists on the device in
+AsyncStorage and syncs those rows through the `/api/v1/pantry/*` API.
 
 ## API (`apps/web`)
 

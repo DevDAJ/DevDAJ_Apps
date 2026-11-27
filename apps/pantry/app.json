@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Pantry Helper",
+    "slug": "pantry",
+    "scheme": "pantry",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "bundleIdentifier": "tech.devdaj.app.pantry"
+    },
+    "android": {
+      "package": "tech.devdaj.app.pantry"
+    },
+    "plugins": ["expo-router", "expo-status-bar", "expo-web-browser"],
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "name": "Pantry Helper",
+      "shortName": "Pantry",
+      "themeColor": "#0b100c",
+      "backgroundColor": "#0b100c"
+    }
+  }
+}

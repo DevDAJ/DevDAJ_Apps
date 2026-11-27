@@ -12,7 +12,8 @@
     "ready": "vp check && vp run -r test && vp run -r build",
     "dev": "vp run web#dev",
     "prepare": "vp config",
-    "fitnexx": "vp run fitnexx#dev"
+    "fitnexx": "vp run fitnexx#dev",
+    "pantry": "vp run pantry#dev"
   },
   "devDependencies": {
     "vite": "catalog:",

@@ -6,6 +6,12 @@
       "runtimeExecutable": "bun",
       "runtimeArgs": ["run", "--cwd", "apps/web", "dev"],
       "port": 3001
+    },
+    {
+      "name": "pantry-web",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "--cwd", "apps/pantry", "web"],
+      "port": 8081
     }
   ]
 }

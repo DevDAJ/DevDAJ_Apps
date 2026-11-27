@@ -24,6 +24,7 @@ table. Verify against the code before relying on any detail here.
 | RevenueCat              | `apps/web/src/server/apps/fitnexx/lib/revenuecat.ts`, `v1/webhooks.ts`                                                                          |
 | Website catalog         | `apps/web/src/catalog.ts`; design: `apps/web/DESIGN.md`                                                                                         |
 | Fitnexx setup doc       | `apps/fitnexx/docs/ai-setup.md` (Supabase, RevenueCat, AI, food analysis)                                                                       |
+| Pantry Helper (mobile)  | `apps/pantry/` (Expo, AsyncStorage + zustand, row sync through `/api/v1/pantry/*`)                                                              |
 | Android release         | `.github/workflows/fitnexx-android-release.yml` (tag `fitnexx-vX.Y.Z`)                                                                          |
 
 ## Invariants (do not break)

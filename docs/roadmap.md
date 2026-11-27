@@ -291,3 +291,42 @@ sleep quality); Ledger can import refill purchases.
 5. Refill reminders.
 6. Travel pack calculator.
 7. "Your data" screen and encrypted export on the shared logic.
+
+### 6. Keep-in-touch reminder (new)
+
+Contact cadences, birthdays (including lunar dates), a small weekly digest and
+fair rotation so nobody is always the one left out.
+
+**Core features:**
+
+- People, stored in the app's own data; any import from the phone's contacts
+  copies only the contacts the user picks.
+- A cadence per person (every N days, weeks or months) and a log of each
+  catch-up, entered by hand. No call log or message access.
+- Birthdays on the Gregorian or a lunar calendar, converted to this year's
+  Gregorian date for reminders.
+- Weekly digest: one notification listing who is due, capped to a few people.
+- Fair rotation: due people ranked by how overdue they are relative to their
+  cadence, with recent digest appearances pushed down so the same names do not
+  repeat every week.
+
+**Sibling links:** none needed at first; it reads no other app's data.
+
+**Planned, in commit-sized steps:**
+
+1. App scaffold with `@devdaj/app-data`, schema, `public_v1_*` views, change
+   log, signed-out by default.
+2. People, cadences and the catch-up log, on the recurrence engine.
+3. Lunar date conversion as pure functions with tests (table-based, since
+   on-device `Intl` calendar support is not reliable on every Android build).
+4. Birthdays with reminders.
+5. Fair rotation ranking as pure functions with tests.
+6. Weekly digest notification.
+7. Pick-from-contacts import.
+8. "Your data" screen and encrypted export on the shared logic.
+
+**Open questions:**
+
+- App name (it sets the `tech.devdaj.app.<name>` id).
+- Which lunar calendars: Chinese, Hijri, or both?
+- Digest day and time, and how many people per digest by default?

@@ -1,3 +1,4 @@
+import type { Change, Writer, WriterTransaction } from "@devdaj/app-data/writer";
 import { KEYS } from "./backupSchema";
 import type { PublicChange } from "./publicData";
 import { dayKey } from "./streak";
@@ -11,8 +12,9 @@ import type { BodyMetrics, Meal, PrType, SetType, WeightUnit, Workout, WorkoutSe
  *
  * meals          id, date, name, calories, protein, carbs, fat, image_uri
  * workouts       id, date, title, duration, total_volume
- * workout_exercises  workout_id, position, exercise_name
- * workout_sets   workout_id, exercise_position, position, exercise_name, weight, reps, rpe,
+ * workout_exercises  id (<workout_id>:<position>), workout_id, position, exercise_name
+ * workout_sets   id (<workout_id>:<exercise_position>:<position>), workout_id,
+ *                exercise_position, position, exercise_name, weight, reps, rpe,
  *                set_type, is_pr, pr_types (JSON array), notes
  * body_metrics   date, weight, height, body_fat, age, sex, target_weight, activity_level
  * water_log      day (YYYY-MM-DD), ml
@@ -22,7 +24,7 @@ import type { BodyMetrics, Meal, PrType, SetType, WeightUnit, Workout, WorkoutSe
 /** The parts of expo-sqlite's `SQLiteDatabase` used here (tests run them on node:sqlite). */
 export interface Db {
   execAsync(sql: string): Promise<void>;
-  runAsync(sql: string, params: SqlParam[]): Promise<unknown>;
+  runAsync(sql: string, params: SqlParam[]): Promise<{ changes: number }>;
   getAllAsync<T>(sql: string, params?: SqlParam[]): Promise<T[]>;
   getFirstAsync<T>(sql: string, params?: SqlParam[]): Promise<T | null>;
   withTransactionAsync(task: () => Promise<void>): Promise<void>;
@@ -30,7 +32,19 @@ export interface Db {
 
 type SqlParam = string | number | null;
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
+
+const ROW_ID_SEPARATOR = ":";
+
+/** Row id for one exercise: `<workout_id>:<position>`. */
+export function exerciseRowId(workoutId: string, position: number): string {
+  return `${workoutId}${ROW_ID_SEPARATOR}${position}`;
+}
+
+/** Row id for one set: `<workout_id>:<exercise_position>:<position>`. */
+export function setRowId(workoutId: string, exercisePosition: number, position: number): string {
+  return `${workoutId}${ROW_ID_SEPARATOR}${exercisePosition}${ROW_ID_SEPARATOR}${position}`;
+}
 
 const SCHEMA_V1 = `
 CREATE TABLE IF NOT EXISTS meals (
@@ -99,16 +113,73 @@ CREATE TABLE IF NOT EXISTS preferences (
 );
 `;
 
+/** Rebuilds the two detail tables with row ids. */
+const SCHEMA_V2 = `
+CREATE TABLE workout_exercises_v2 (
+  id TEXT PRIMARY KEY,
+  workout_id TEXT NOT NULL REFERENCES workouts (id) ON DELETE CASCADE,
+  position INTEGER NOT NULL,
+  exercise_name TEXT NOT NULL,
+  UNIQUE (workout_id, position)
+);
+
+CREATE TABLE workout_sets_v2 (
+  id TEXT PRIMARY KEY,
+  workout_id TEXT NOT NULL REFERENCES workouts (id) ON DELETE CASCADE,
+  exercise_position INTEGER NOT NULL,
+  position INTEGER NOT NULL,
+  exercise_name TEXT NOT NULL,
+  weight REAL NOT NULL,
+  reps REAL NOT NULL,
+  rpe REAL,
+  set_type TEXT NOT NULL,
+  is_pr INTEGER,
+  pr_types TEXT,
+  notes TEXT,
+  UNIQUE (workout_id, exercise_position, position)
+);
+
+INSERT INTO workout_exercises_v2 (id, workout_id, position, exercise_name)
+SELECT workout_id || '${ROW_ID_SEPARATOR}' || position, workout_id, position, exercise_name
+FROM workout_exercises;
+
+INSERT INTO workout_sets_v2 (
+  id, workout_id, exercise_position, position, exercise_name, weight, reps, rpe, set_type,
+  is_pr, pr_types, notes
+)
+SELECT workout_id || '${ROW_ID_SEPARATOR}' || exercise_position || '${ROW_ID_SEPARATOR}' || position,
+  workout_id, exercise_position, position, exercise_name, weight, reps, rpe, set_type,
+  is_pr, pr_types, notes
+FROM workout_sets;
+
+DROP TABLE workout_exercises;
+DROP TABLE workout_sets;
+ALTER TABLE workout_exercises_v2 RENAME TO workout_exercises;
+ALTER TABLE workout_sets_v2 RENAME TO workout_sets;
+
+CREATE INDEX IF NOT EXISTS workout_exercises_workout_idx ON workout_exercises (workout_id);
+CREATE INDEX IF NOT EXISTS workout_sets_workout_idx ON workout_sets (workout_id);
+CREATE INDEX IF NOT EXISTS workout_sets_exercise_idx ON workout_sets (exercise_name);
+`;
+
 /** Creates or upgrades the tables. Safe to run on every launch. */
 export async function migrate(db: Db): Promise<void> {
-  await db.execAsync("PRAGMA foreign_keys = ON;");
   const row = await db.getFirstAsync<{ user_version: number }>("PRAGMA user_version");
   const version = row?.user_version ?? 0;
-  if (version >= SCHEMA_VERSION) return;
-  await db.withTransactionAsync(async () => {
-    if (version < 1) await db.execAsync(SCHEMA_V1);
-    await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
-  });
+  if (version >= SCHEMA_VERSION) {
+    await db.execAsync("PRAGMA foreign_keys = ON;");
+    return;
+  }
+  await db.execAsync("PRAGMA foreign_keys = OFF;");
+  try {
+    await db.withTransactionAsync(async () => {
+      if (version < 1) await db.execAsync(SCHEMA_V1);
+      await db.execAsync(SCHEMA_V2);
+      await db.execAsync(`PRAGMA user_version = ${SCHEMA_VERSION}`);
+    });
+  } finally {
+    await db.execAsync("PRAGMA foreign_keys = ON;");
+  }
 }
 
 /** AsyncStorage / backup / sync keys whose data lives in SQLite. */
@@ -120,6 +191,17 @@ export const SHARED_KEYS: readonly string[] = [
   KEYS.WEIGHT_UNIT,
   KEYS.DAILY_CALORIE_GOAL,
 ];
+
+/** Primary-key columns used by the private change-log writer. */
+export const PRIVATE_KEYS: Record<string, string> = {
+  workouts: "id",
+  workout_exercises: "id",
+  workout_sets: "id",
+  meals: "id",
+  body_metrics: "date",
+  water_log: "day",
+  preferences: "key",
+};
 
 /**
  * Splits a validated backup or sync payload (keyed like the old AsyncStorage keys) into the
@@ -176,14 +258,17 @@ interface WorkoutRow {
 }
 
 interface ExerciseRow {
+  id: string;
   workout_id: string;
   position: number;
   exercise_name: string;
 }
 
 interface SetRow {
+  id: string;
   workout_id: string;
   exercise_position: number;
+  position: number;
   weight: number;
   reps: number;
   rpe: number | null;
@@ -245,121 +330,155 @@ function toBodyMetrics(row: BodyMetricsRow): BodyMetrics {
   return metrics;
 }
 
-async function writeMeal(db: Db, meal: Meal): Promise<void> {
-  await db.runAsync(
-    `INSERT OR REPLACE INTO meals (id, date, name, calories, protein, carbs, fat, image_uri)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      meal.id,
-      meal.date,
-      meal.name,
-      meal.calories,
-      meal.protein,
-      meal.carbs,
-      meal.fat,
-      opt(meal.imageUri),
-    ],
-  );
+function mealFields(meal: Meal): Record<string, SqlParam> {
+  return {
+    date: meal.date,
+    name: meal.name,
+    calories: meal.calories,
+    protein: meal.protein,
+    carbs: meal.carbs,
+    fat: meal.fat,
+    image_uri: opt(meal.imageUri),
+  };
 }
 
-async function writeWorkout(db: Db, workout: Workout): Promise<void> {
-  // Replacing the parent row cascades to its exercises and sets.
-  await db.runAsync("DELETE FROM workouts WHERE id = ?", [workout.id]);
-  await db.runAsync(
-    "INSERT INTO workouts (id, date, title, duration, total_volume) VALUES (?, ?, ?, ?, ?)",
-    [workout.id, workout.date, workout.title, workout.duration, workout.totalVolume],
-  );
+function workoutFields(workout: Workout): Record<string, SqlParam> {
+  return {
+    date: workout.date,
+    title: workout.title,
+    duration: workout.duration,
+    total_volume: workout.totalVolume,
+  };
+}
+
+function exerciseFields(
+  workoutId: string,
+  position: number,
+  name: string,
+): Record<string, SqlParam> {
+  return { workout_id: workoutId, position, exercise_name: name };
+}
+
+function setFields(
+  workoutId: string,
+  exercisePosition: number,
+  position: number,
+  exerciseName: string,
+  set: WorkoutSet,
+): Record<string, SqlParam> {
+  return {
+    workout_id: workoutId,
+    exercise_position: exercisePosition,
+    position,
+    exercise_name: exerciseName,
+    weight: set.weight,
+    reps: set.reps,
+    rpe: opt(set.rpe),
+    set_type: set.setType,
+    is_pr: opt(set.isPr),
+    pr_types: set.prTypes === undefined ? null : JSON.stringify(set.prTypes),
+    notes: opt(set.notes),
+  };
+}
+
+function bodyMetricsFields(metrics: BodyMetrics): Record<string, SqlParam> {
+  return {
+    weight: metrics.weight,
+    height: metrics.height,
+    body_fat: opt(metrics.bodyFat),
+    age: metrics.age,
+    sex: metrics.sex,
+    target_weight: opt(metrics.targetWeight),
+    activity_level: metrics.activityLevel,
+  };
+}
+
+/** Writes one workout and its detail rows, returning the row ids just written. */
+async function writeWorkout(
+  tx: WriterTransaction,
+  workout: Workout,
+): Promise<{ exerciseIds: Set<string>; setIds: Set<string> }> {
+  const exerciseChanges: Change[] = [];
+  const setChanges: Change[] = [];
   for (const [position, exercise] of workout.exercises.entries()) {
-    await db.runAsync(
-      "INSERT INTO workout_exercises (workout_id, position, exercise_name) VALUES (?, ?, ?)",
-      [workout.id, position, exercise.exerciseName],
-    );
+    exerciseChanges.push({
+      kind: "set",
+      row: exerciseRowId(workout.id, position),
+      fields: exerciseFields(workout.id, position, exercise.exerciseName),
+    });
     for (const [setPosition, set] of exercise.sets.entries()) {
-      await db.runAsync(
-        `INSERT INTO workout_sets (workout_id, exercise_position, position, exercise_name, weight,
-           reps, rpe, set_type, is_pr, pr_types, notes)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          workout.id,
-          position,
-          setPosition,
-          exercise.exerciseName,
-          set.weight,
-          set.reps,
-          opt(set.rpe),
-          set.setType,
-          opt(set.isPr),
-          set.prTypes === undefined ? null : JSON.stringify(set.prTypes),
-          opt(set.notes),
-        ],
-      );
+      setChanges.push({
+        kind: "set",
+        row: setRowId(workout.id, position, setPosition),
+        fields: setFields(workout.id, position, setPosition, exercise.exerciseName, set),
+      });
     }
   }
+  await tx.write("workouts", [{ kind: "set", row: workout.id, fields: workoutFields(workout) }]);
+  await tx.write("workout_exercises", exerciseChanges);
+  await tx.write("workout_sets", setChanges);
+  return {
+    exerciseIds: new Set(exerciseChanges.map((change) => change.row)),
+    setIds: new Set(setChanges.map((change) => change.row)),
+  };
 }
 
-async function writeBodyMetrics(db: Db, metrics: BodyMetrics): Promise<void> {
-  await db.runAsync(
-    `INSERT OR REPLACE INTO body_metrics (date, weight, height, body_fat, age, sex, target_weight,
-       activity_level)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      metrics.date,
-      metrics.weight,
-      metrics.height,
-      opt(metrics.bodyFat),
-      metrics.age,
-      metrics.sex,
-      opt(metrics.targetWeight),
-      metrics.activityLevel,
-    ],
-  );
+async function writeMeal(tx: WriterTransaction, meal: Meal): Promise<void> {
+  await tx.write("meals", [{ kind: "set", row: meal.id, fields: mealFields(meal) }]);
 }
 
-async function writeWaterLog(db: Db, log: Record<string, number>): Promise<void> {
-  await db.runAsync("DELETE FROM water_log", []);
+async function writeBodyMetrics(tx: WriterTransaction, metrics: BodyMetrics): Promise<void> {
+  await tx.write("body_metrics", [
+    { kind: "set", row: metrics.date, fields: bodyMetricsFields(metrics) },
+  ]);
+}
+
+async function writeWaterLog(tx: WriterTransaction, log: Record<string, number>): Promise<void> {
+  const current = await tx.getAll<{ day: string; ml: number }>("SELECT day, ml FROM water_log");
+  const changes: Change[] = [];
   for (const [day, ml] of Object.entries(log)) {
-    await db.runAsync("INSERT INTO water_log (day, ml) VALUES (?, ?)", [day, ml]);
+    if (!current.some((row) => row.day === day && row.ml === ml)) {
+      changes.push({ kind: "set", row: day, fields: { ml } });
+    }
   }
+  for (const row of current) {
+    if (!Object.hasOwn(log, row.day)) changes.push({ kind: "delete", row: row.day });
+  }
+  await tx.write("water_log", changes);
 }
 
-async function writePreference(db: Db, key: string, value: SqlParam): Promise<void> {
-  if (value === null) await db.runAsync("DELETE FROM preferences WHERE key = ?", [key]);
-  else
-    await db.runAsync("INSERT OR REPLACE INTO preferences (key, value) VALUES (?, ?)", [
-      key,
-      value,
-    ]);
+/** Sets one preference row, or deletes it when the value is null. */
+async function writePreference(tx: WriterTransaction, key: string, value: SqlParam): Promise<void> {
+  const changes: Change[] =
+    value === null
+      ? [{ kind: "delete", row: key }]
+      : [{ kind: "set", row: key, fields: { value } }];
+  await tx.write("preferences", changes);
 }
 
-async function writeSnapshot(db: Db, data: SharedSnapshot): Promise<void> {
-  for (const workout of data.workouts) await writeWorkout(db, workout);
-  for (const meal of data.meals) await writeMeal(db, meal);
-  for (const metrics of data.bodyMetrics) await writeBodyMetrics(db, metrics);
-  await writeWaterLog(db, data.waterLog);
-  await writePreference(db, "weight_unit", data.weightUnit);
-  await writePreference(db, "daily_calorie_goal", data.dailyCalorieGoal);
+async function writeSnapshot(tx: WriterTransaction, data: SharedSnapshot): Promise<void> {
+  for (const workout of data.workouts) await writeWorkout(tx, workout);
+  for (const meal of data.meals) await writeMeal(tx, meal);
+  for (const metrics of data.bodyMetrics) await writeBodyMetrics(tx, metrics);
+  await writeWaterLog(tx, data.waterLog);
+  await writePreference(tx, "weight_unit", data.weightUnit);
+  await writePreference(tx, "daily_calorie_goal", data.dailyCalorieGoal);
 }
 
-const CLEAR_ALL = `
-DELETE FROM workout_sets; DELETE FROM workout_exercises; DELETE FROM workouts;
-DELETE FROM meals; DELETE FROM body_metrics; DELETE FROM water_log; DELETE FROM preferences;
-`;
+type GetWriter = () => Promise<{ db: Db; writer: Writer }>;
 
-export function createSharedData(
-  getDb: () => Promise<Db>,
-  onChange?: (change: PublicChange) => void,
-) {
+export function createSharedData(getWriter: GetWriter, onChange?: (change: PublicChange) => void) {
   // One write at a time: transactions on a shared connection must not interleave.
   let queue: Promise<unknown> = Promise.resolve();
   const write = <T>(
-    task: (db: Db) => Promise<T>,
+    task: (tx: WriterTransaction) => Promise<T>,
     change?: (result: T) => PublicChange | undefined,
   ): Promise<T> => {
     const run = queue.then(async () => {
-      const db = await getDb();
+      const { writer } = await getWriter();
       let result!: T;
-      await db.withTransactionAsync(async () => {
-        result = await task(db);
+      await writer.transaction(async (tx) => {
+        result = await task(tx);
       });
       if (onChange && change) {
         try {
@@ -377,7 +496,7 @@ export function createSharedData(
   };
   const read = async <T>(task: (db: Db) => Promise<T>): Promise<T> => {
     await queue;
-    return task(await getDb());
+    return task((await getWriter()).db);
   };
 
   const getWorkouts = () =>
@@ -435,29 +554,75 @@ export function createSharedData(
     getWorkouts,
     saveWorkout: (workout: Workout) =>
       write(
-        (db) => writeWorkout(db, workout),
+        async (tx) => {
+          const [oldExercises, oldSets] = await Promise.all([
+            tx.getAll<{ id: string }>(
+              "SELECT id FROM workout_exercises WHERE workout_id = ? ORDER BY id",
+              [workout.id],
+            ),
+            tx.getAll<{ id: string }>(
+              "SELECT id FROM workout_sets WHERE workout_id = ? ORDER BY id",
+              [workout.id],
+            ),
+          ]);
+          const { exerciseIds, setIds } = await writeWorkout(tx, workout);
+          const staleSets = oldSets.filter((row) => !setIds.has(row.id));
+          if (staleSets.length > 0) {
+            await tx.write(
+              "workout_sets",
+              staleSets.map((row) => ({ kind: "delete", row: row.id })),
+            );
+          }
+          const staleExercises = oldExercises.filter((row) => !exerciseIds.has(row.id));
+          if (staleExercises.length > 0) {
+            await tx.write(
+              "workout_exercises",
+              staleExercises.map((row) => ({ kind: "delete", row: row.id })),
+            );
+          }
+        },
         () => ({ workouts: [workout.id] }),
       ),
     deleteWorkout: (id: string) =>
       write(
-        (db) => db.runAsync("DELETE FROM workouts WHERE id = ?", [id]).then(() => {}),
+        async (tx) => {
+          const [exercises, sets] = await Promise.all([
+            tx.getAll<{ id: string }>(
+              "SELECT id FROM workout_exercises WHERE workout_id = ? ORDER BY id",
+              [id],
+            ),
+            tx.getAll<{ id: string }>(
+              "SELECT id FROM workout_sets WHERE workout_id = ? ORDER BY id",
+              [id],
+            ),
+          ]);
+          await tx.write(
+            "workout_sets",
+            sets.map((row) => ({ kind: "delete", row: row.id })),
+          );
+          await tx.write(
+            "workout_exercises",
+            exercises.map((row) => ({ kind: "delete", row: row.id })),
+          );
+          await tx.write("workouts", [{ kind: "delete", row: id }]);
+        },
         () => ({ workouts: [id] }),
       ),
 
     getMeals,
     saveMeal: (meal: Meal) =>
       write(
-        (db) => writeMeal(db, meal),
+        (tx) => writeMeal(tx, meal),
         () => ({ mealDays: [dayKey(new Date(meal.date))] }),
       ),
     async updateMeal(id: string, updates: Partial<Meal>): Promise<void> {
       await write(
-        async (db) => {
-          const row = await db.getFirstAsync<MealRow>("SELECT * FROM meals WHERE id = ?", [id]);
+        async (tx) => {
+          const row = await tx.getFirst<MealRow>("SELECT * FROM meals WHERE id = ?", [id]);
           if (!row) return undefined;
           const merged = { ...toMeal(row), ...updates, id };
           const days = [dayKey(new Date(row.date)), dayKey(new Date(merged.date))];
-          await writeMeal(db, merged);
+          await writeMeal(tx, merged);
           return days;
         },
         (days) => (days ? { mealDays: days } : undefined),
@@ -465,12 +630,11 @@ export function createSharedData(
     },
     deleteMeal: (id: string) =>
       write(
-        async (db) => {
-          const row = await db.getFirstAsync<{ date: string }>(
-            "SELECT date FROM meals WHERE id = ?",
-            [id],
-          );
-          await db.runAsync("DELETE FROM meals WHERE id = ?", [id]);
+        async (tx) => {
+          const row = await tx.getFirst<{ date: string }>("SELECT date FROM meals WHERE id = ?", [
+            id,
+          ]);
+          await tx.write("meals", [{ kind: "delete", row: id }]);
           return row?.date;
         },
         (date) => (date ? { mealDays: [dayKey(new Date(date))] } : undefined),
@@ -484,7 +648,7 @@ export function createSharedData(
       ),
     saveBodyMetrics: (metrics: BodyMetrics) =>
       write(
-        (db) => writeBodyMetrics(db, metrics),
+        (tx) => writeBodyMetrics(tx, metrics),
         () => ({ weightDays: [dayKey(new Date(metrics.date))] }),
       ),
 
@@ -495,52 +659,84 @@ export function createSharedData(
         );
         return Object.fromEntries(rows.map((row) => [row.day, row.ml])) as Record<string, number>;
       }),
-    saveWaterLog: (log: Record<string, number>) => write((db) => writeWaterLog(db, log)),
+    saveWaterLog: (log: Record<string, number>) => write((tx) => writeWaterLog(tx, log)),
 
     async getWeightUnit(): Promise<WeightUnit> {
       return (await getPreference("weight_unit")) === "lbs" ? "lbs" : "kg";
     },
-    setWeightUnit: (unit: WeightUnit) => write((db) => writePreference(db, "weight_unit", unit)),
+    setWeightUnit: (unit: WeightUnit) => write((tx) => writePreference(tx, "weight_unit", unit)),
 
     async getDailyCalorieGoal(): Promise<number | null> {
       const value = await getPreference("daily_calorie_goal");
       return typeof value === "number" ? value : null;
     },
     setDailyCalorieGoal: (goal: number | null) =>
-      write((db) => writePreference(db, "daily_calorie_goal", goal)),
+      write((tx) => writePreference(tx, "daily_calorie_goal", goal)),
 
     /** Replaces everything (backup restore, LAN sync) in one transaction. */
     replaceAll: (data: SharedSnapshot) =>
       write(
-        async (db) => {
-          await db.execAsync(CLEAR_ALL);
-          await writeSnapshot(db, data);
+        async (tx) => {
+          await tx.purge();
+          await writeSnapshot(tx, data);
         },
         () => ({ all: true }),
       ),
 
     clearAll: () =>
       write(
-        (db) => db.execAsync(CLEAR_ALL),
+        async (tx) => {
+          await tx.purge();
+        },
         () => ({ all: true }),
       ),
 
     /** One-time import of data saved by versions that kept everything in AsyncStorage. */
     importLegacy: (data: Partial<SharedSnapshot>) =>
       write(
-        async (db) => {
-          for (const workout of data.workouts ?? []) await writeWorkout(db, workout);
-          for (const meal of data.meals ?? []) await writeMeal(db, meal);
-          for (const metrics of data.bodyMetrics ?? []) await writeBodyMetrics(db, metrics);
-          if (data.waterLog) await writeWaterLog(db, data.waterLog);
-          if (data.weightUnit) await writePreference(db, "weight_unit", data.weightUnit);
+        async (tx) => {
+          for (const workout of data.workouts ?? []) await writeWorkout(tx, workout);
+          for (const meal of data.meals ?? []) await writeMeal(tx, meal);
+          for (const metrics of data.bodyMetrics ?? []) await writeBodyMetrics(tx, metrics);
+          if (data.waterLog) await writeWaterLog(tx, data.waterLog);
+          if (data.weightUnit) await writePreference(tx, "weight_unit", data.weightUnit);
           if (data.dailyCalorieGoal !== undefined) {
-            await writePreference(db, "daily_calorie_goal", data.dailyCalorieGoal);
+            await writePreference(tx, "daily_calorie_goal", data.dailyCalorieGoal);
           }
         },
         () => ({ all: true }),
       ),
   };
+}
+
+/** Baselines rows that existed before logging started, parents before children. */
+export async function baselineIfEmpty(writer: Writer): Promise<number> {
+  return writer.transaction(async (tx) => {
+    const logged = await tx.getFirst<{ present: number }>(
+      "SELECT 1 AS present FROM _devdaj_log LIMIT 1",
+    );
+    if (logged) return 0;
+    const populated: { table: string; key: string; rows: Record<string, SqlParam>[] }[] = [];
+    for (const [table, key] of Object.entries(PRIVATE_KEYS)) {
+      const rows = await tx.getAll<Record<string, SqlParam>>(`SELECT * FROM ${table}`);
+      if (rows.length > 0) populated.push({ table, key, rows });
+    }
+    if (populated.length === 0) return 0;
+    let written = 0;
+    for (const { table, key, rows } of populated) {
+      const changes: Change[] = [];
+      for (const row of rows) {
+        const fields = { ...row };
+        const value = fields[key];
+        delete fields[key];
+        if (value === null || value === undefined) continue;
+        changes.push({ kind: "set", row: String(value), fields });
+      }
+      await tx.write(table, changes);
+      written += changes.length;
+    }
+    return written;
+  });
 }
 
 export type SharedData = ReturnType<typeof createSharedData>;

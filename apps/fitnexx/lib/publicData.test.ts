@@ -1,7 +1,15 @@
+import { openWriter } from "@devdaj/app-data/writer";
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, test } from "vite-plus/test";
 import { copyLegacyShared, createPublisher, migratePublic } from "./publicData";
-import { createSharedData, type Db, migrate } from "./sharedData";
+import {
+  createSharedData,
+  type Db,
+  exerciseRowId,
+  migrate,
+  PRIVATE_KEYS,
+  setRowId,
+} from "./sharedData";
 import { dayKey } from "./streak";
 import type { BodyMetrics, Meal, Workout } from "./types";
 
@@ -14,7 +22,8 @@ function nodeDb(): Db & { raw: DatabaseSync } {
       raw.exec(sql);
     },
     async runAsync(sql, params) {
-      return raw.prepare(sql).run(...params);
+      const result = raw.prepare(sql).run(...params);
+      return { changes: Number(result.changes) };
     },
     async getAllAsync<T>(sql: string, params: (string | number | null)[] = []) {
       return raw.prepare(sql).all(...params) as T[];
@@ -96,12 +105,23 @@ const metrics: BodyMetrics[] = [
   },
 ];
 
+/** Opens a deterministic writer so private writes also record change-log operations. */
+async function testData(db: Db) {
+  const writer = await openWriter(db, {
+    app: "fitnexx",
+    keys: PRIVATE_KEYS,
+    newDeviceId: () => "testdevice",
+    now: () => 1,
+  });
+  return createSharedData(async () => ({ db, writer }));
+}
+
 async function setup() {
   const privateDb = nodeDb();
   const publicDb = nodeDb();
   await migrate(privateDb);
   await migratePublic(publicDb);
-  const data = createSharedData(async () => privateDb);
+  const data = await testData(privateDb);
   const publisher = createPublisher(
     async () => privateDb,
     async () => publicDb,
@@ -178,19 +198,39 @@ describe("public summary schema", () => {
   test("legacy v1 data moves to private before the old public tables are dropped", async () => {
     const legacyDb = nodeDb();
     await migrate(legacyDb);
-    const legacy = createSharedData(async () => legacyDb);
+    const legacy = await testData(legacyDb);
     await legacy.saveWorkout(workout);
     for (const meal of meals) await legacy.saveMeal(meal);
     for (const metric of metrics) await legacy.saveBodyMetrics(metric);
     await legacy.saveWaterLog({ [dayKey(new Date(localIso(18)))]: 750 });
     await legacy.setWeightUnit("lbs");
     await legacy.setDailyCalorieGoal(2200);
+    // copyLegacyShared only runs against a pre-summary v1 public database.
+    await legacyDb.execAsync("PRAGMA user_version = 1;");
 
     const privateDb = nodeDb();
     await migrate(privateDb);
     expect(await copyLegacyShared(legacyDb, privateDb)).toBe(true);
+    expect(
+      await privateDb.getAllAsync<{ id: string }>(
+        "SELECT id FROM workout_exercises ORDER BY position",
+      ),
+    ).toEqual(
+      workout.exercises.map((_, position) => ({ id: exerciseRowId(workout.id, position) })),
+    );
+    expect(
+      await privateDb.getAllAsync<{ id: string }>(
+        "SELECT id FROM workout_sets ORDER BY exercise_position, position",
+      ),
+    ).toEqual(
+      workout.exercises.flatMap((exercise, exercisePosition) =>
+        exercise.sets.map((_, position) => ({
+          id: setRowId(workout.id, exercisePosition, position),
+        })),
+      ),
+    );
 
-    const privateData = createSharedData(async () => privateDb);
+    const privateData = await testData(privateDb);
     expect(await privateData.getWorkouts()).toEqual(await legacy.getWorkouts());
     expect(await privateData.getMeals()).toEqual(await legacy.getMeals());
     expect(await privateData.getBodyMetrics()).toEqual(await legacy.getBodyMetrics());

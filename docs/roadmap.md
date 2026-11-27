@@ -36,16 +36,80 @@ is added and refined here one at a time before any of its code is written.
 
 Shared pieces, built once and reused. Each lands as its own small commits.
 
-| Piece                     | Where                 | Notes                                                   |
-| ------------------------- | --------------------- | ------------------------------------------------------- |
-| Public views + migrations | `@devdaj/app-data`    | Schema version per file, ordered migrations             |
-| Change log                | `@devdaj/app-data`    | Written from day one, even before any sync exists       |
-| Backup exclusion          | `@devdaj/app-data`    | Config plugin marks the shared folder as not backed up  |
-| "Your data" logic         | `@devdaj/app-data`    | Headless: list, export, delete; each app draws the UI   |
-| Encrypted export/restore  | new headless package  | libsodium, passphrase-derived key, recovery key         |
-| Optional sign-in          | `@devdaj/auth` + apps | Every feature except sync and sharing works signed out  |
-| Recurrence engine         | new headless package  | Used by vehicle, vault, medication, keep-in-touch       |
-| Import pipeline           | new headless package  | Parser first, model fallback, user confirms, hash cache |
+| Piece                     | Where                 | Notes                                                      |
+| ------------------------- | --------------------- | ---------------------------------------------------------- |
+| Public views + migrations | `@devdaj/app-data`    | Schema version per file, ordered migrations                |
+| Change log                | `@devdaj/app-data`    | Written from day one, even before any sync exists          |
+| Backup exclusion          | `@devdaj/app-data`    | Config plugin marks the shared folder as not backed up     |
+| "Your data" logic         | `@devdaj/app-data`    | Headless: list, export, delete; each app draws the UI      |
+| Encrypted export/restore  | new headless package  | libsodium, passphrase-derived key, recovery key            |
+| Optional sign-in          | `@devdaj/auth` + apps | Every feature except sync and sharing works signed out     |
+| Recurrence engine         | new headless package  | Used by vehicle, vault, medication, keep-in-touch          |
+| Import pipeline           | new headless package  | Parser first, model fallback, user confirms, hash cache    |
+| Attachment service        | `@devdaj/app-data`    | Files beside the database; references and hashes in tables |
+
+## Sync and encryption
+
+Built after Garage (build order step 4) and extended for Pantry households.
+Today only Fitnexx syncs: a plaintext TCP exchange of whole AsyncStorage
+values between two phones on one network, paired by QR code with a token.
+Pantry syncs plaintext rows through the API. Both move onto this design.
+
+**Design:**
+
+- **Change log.** Every write appends an operation: app, table, row id,
+  changed fields, operation type, device id and a hybrid logical clock (HLC)
+  timestamp. Each app writes only its own log.
+- **Merge rules.** Append-only tables union and never conflict; edits merge
+  per field, the later HLC wins; counts sync as increment or decrement
+  operations; deletes are tombstones, and a "delete this app's data" request
+  from the "Your data" screen is itself an operation, so it propagates.
+- **Keys.** One random data key for all of a user's apps, created only when
+  they first turn on export or sync. It is wrapped by a key derived from their
+  passphrase (Argon2id) and by a printable recovery key; there is no reset.
+  Siblings get it through the iOS keychain group and, on Android, the
+  signature-protected app-data provider.
+- **Encryption.** Operations travel in batches sealed with XChaCha20-Poly1305
+  (libsodium). Every transport carries only ciphertext.
+- **Transports**, all moving the same encrypted batches:
+  - Export/restore file (free, manual).
+  - LAN: QR pairing carries the address and a one-time secret; devices
+    exchange what the other lacks, replacing Fitnexx's plaintext sync.
+  - Google Drive: the hidden app-data folder (narrowest scope), one
+    append-only segment file per device so devices never overwrite each
+    other.
+  - Hosted: the API stores ciphertext segments per user or household.
+- **Android rebuild.** Every installed app mirrors its siblings' encrypted
+  logs, so a reinstalled app can rebuild from them.
+- **Households.** A random household key, wrapped for each member's public
+  key; removing a member rotates the key.
+
+**Planned, in commit-sized steps:**
+
+1. Operation format, HLC and merge rules as pure functions with tests.
+2. Log writer in `@devdaj/app-data`, used by every app from its first release.
+3. Crypto package: data key, Argon2id wrapping, recovery key, batch sealing;
+   same API on native and web.
+4. Key storage and sharing between sibling apps.
+5. Encrypted export/restore file.
+6. Transport interface and the LAN transport; Fitnexx moves onto it.
+7. Google Drive transport.
+8. Sibling log mirroring on Android.
+9. Log compaction (snapshots so new devices do not replay everything).
+10. Hosted ciphertext transport on the API.
+11. Household keys and membership changes (Pantry's step 11 builds on this).
+12. Hosted sync subscription.
+
+**Open questions:**
+
+- How the log is written: an app-data write helper that records operations
+  (recommended: field-level, no extra dependency), the SQLite session
+  extension (row-level changesets), or a CRDT library such as Automerge or
+  Yjs (heavier, document-shaped)?
+- Pantry households need the hosted transport (step 10) and household keys
+  (step 11) before Ledger in the build order. Move both earlier?
+- Hosted sync is a subscription. Do Pantry households stay free (household
+  sync free, personal multi-device hosted sync paid), or become paid?
 
 ## Apps
 

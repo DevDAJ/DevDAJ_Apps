@@ -423,3 +423,40 @@ Fitnexx could show beside training.
 8. Optional sleep import from Apple Health or Health Connect (read-only, on
    request, filling days without a manual entry).
 9. "Your data" screen and encrypted export on the shared logic.
+
+### 9. Work achievements journal (new)
+
+A weekly prompt to record wins, entries tagged by project, impact and skills,
+competency coverage and resume bullets built from templates.
+
+**Core features:**
+
+- Weekly prompt notification on a chosen day; an entry takes a minute.
+- Entries: what happened, project, impact (with an optional number and unit,
+  for example "cut build time 40%"), skills used, date.
+- Competency coverage: entries mapped to the user's competency list, showing
+  which competencies have recent evidence and which have none.
+- Resume bullets from templates ("Did X for Y, resulting in Z"), filled from
+  an entry's fields; copy or export as plain text or Markdown.
+- Filters by project, skill and date range for review season.
+
+**Sibling links:** none needed; it reads no other app's data.
+
+**Planned, in commit-sized steps:**
+
+1. App scaffold with `@devdaj/app-data`, schema, `public_v1_*` views, change
+   log, signed-out by default.
+2. Entries with projects and skills.
+3. Weekly prompt on the recurrence engine.
+4. Competency list and coverage view.
+5. Bullet templates as pure functions with tests, and export.
+6. Review filters.
+7. "Your data" screen and encrypted export on the shared logic.
+
+**Open questions:**
+
+- App name (it sets the `tech.devdaj.app.<name>` id).
+- Competency list: user-built only, or a few editable starter frameworks
+  (for example a generic engineering ladder)?
+- Bullets: templates only, or also an optional model rewrite through the
+  server (opt-in per bullet, since entries describe the user's employer)?

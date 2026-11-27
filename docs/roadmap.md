@@ -379,10 +379,15 @@ Pillbox's travel pack calculator import trip dates.
 7. Garage renewals shown read-only; trips view for Pillbox.
 8. "Your data" screen and encrypted export on the shared logic.
 
-### 8. Sleep and mood journal (new)
+### 8. Dayfold: sleep and mood journal (new)
 
 Quick morning and evening entries, yes/no factors, a correlation engine with
 lag and personal experiments. All statistics are plain code; no model.
+
+**Decisions (2026-11-28):** named Dayfold (`tech.devdaj.app.dayfold`);
+optional read-only sleep import from Apple Health or Health Connect, with
+manual entry as the default; correlation results need at least 14 days in
+each group, use lags of 0 to 2 days and a false discovery rate correction.
 
 **Core features:**
 
@@ -415,11 +420,6 @@ Fitnexx could show beside training.
 5. Insights screen.
 6. Factors imported from Fitnexx and Pillbox.
 7. Personal experiments (on/off schedule and the completed comparison).
-8. "Your data" screen and encrypted export on the shared logic.
-
-**Open questions:**
-
-- App name (it sets the `tech.devdaj.app.<name>` id).
-- Import sleep from Apple Health or Health Connect, or entries by hand only?
-- Statistics defaults: at least 14 days in each group, lags of 0 to 2 days,
-  false discovery rate correction. Accept, or set stricter or looser?
+8. Optional sleep import from Apple Health or Health Connect (read-only, on
+   request, filling days without a manual entry).
+9. "Your data" screen and encrypted export on the shared logic.

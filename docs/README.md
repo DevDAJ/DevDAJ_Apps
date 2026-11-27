@@ -9,6 +9,7 @@ details, and [AGENTS.md](../AGENTS.md) is the entry point for AI agents.
 | [architecture.md](architecture.md)           | How the apps, API, database and shared packages fit together |
 | [coding-guidelines.md](coding-guidelines.md) | Conventions for code, SQL, comments and docs                 |
 | [ai-reference.md](ai-reference.md)           | Map of the codebase and invariants for AI agents             |
+| [roadmap.md](roadmap.md)                     | Planned apps, shared foundations and decisions               |
 
 App-specific setup: [apps/fitnexx/docs/ai-setup.md](../apps/fitnexx/docs/ai-setup.md)
 (Supabase, RevenueCat, AI chat, food analysis). Web visual design:

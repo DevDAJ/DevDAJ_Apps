@@ -378,3 +378,48 @@ Pillbox's travel pack calculator import trip dates.
 6. Trips and the travel check.
 7. Garage renewals shown read-only; trips view for Pillbox.
 8. "Your data" screen and encrypted export on the shared logic.
+
+### 8. Sleep and mood journal (new)
+
+Quick morning and evening entries, yes/no factors, a correlation engine with
+lag and personal experiments. All statistics are plain code; no model.
+
+**Core features:**
+
+- Morning entry (bedtime, wake time, sleep quality 1 to 5) and evening entry
+  (mood and energy 1 to 5), each a few taps.
+- Yes/no factors defined by the user (for example caffeine after 2 pm,
+  alcohol, screens in bed), ticked in the evening entry.
+- Factors imported from siblings: trained today (Fitnexx), took a given item
+  (Pillbox).
+- Correlation engine: each factor on day d against each outcome on day d to
+  d+2. Results appear only once both the "yes" and "no" groups reach a minimum
+  number of days, shown as a difference with its uncertainty, worded as an
+  association, not a cause. Many factors times several lags produce false hits
+  by chance, so results are filtered with a multiple-comparison correction.
+- Personal experiments: two weeks on, two weeks off (repeatable), with the
+  comparison shown only when the schedule completes.
+
+**Sibling links (read and import):** reads Fitnexx workouts and Pillbox doses
+through their `public_v1_*` views; exposes daily sleep and mood as a view
+Fitnexx could show beside training.
+
+**Planned, in commit-sized steps:**
+
+1. App scaffold with `@devdaj/app-data`, schema, `public_v1_*` views, change
+   log, signed-out by default.
+2. Morning and evening entries with reminders.
+3. User-defined factors.
+4. Correlation engine as pure functions with tests: lagged group comparison,
+   sample-size threshold, multiple-comparison correction.
+5. Insights screen.
+6. Factors imported from Fitnexx and Pillbox.
+7. Personal experiments (on/off schedule and the completed comparison).
+8. "Your data" screen and encrypted export on the shared logic.
+
+**Open questions:**
+
+- App name (it sets the `tech.devdaj.app.<name>` id).
+- Import sleep from Apple Health or Health Connect, or entries by hand only?
+- Statistics defaults: at least 14 days in each group, lags of 0 to 2 days,
+  false discovery rate correction. Accept, or set stricter or looser?

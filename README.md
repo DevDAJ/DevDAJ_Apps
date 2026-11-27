@@ -6,14 +6,15 @@ one Supabase project and one API.
 
 ## Workspaces
 
-| Path                 | Package             | Description                                                                               |
-| -------------------- | ------------------- | ----------------------------------------------------------------------------------------- |
-| `apps/web`           | `web`               | Website, admin dashboard and API (`/api/v<n>/...`) ([README](apps/web/README.md))         |
-| `apps/fitnexx`       | `fitnexx`           | Fitnexx Expo mobile app ([README](apps/fitnexx/README.md))                                |
-| `packages/auth`      | `@devdaj/auth`      | Shared headless Supabase login ([README](packages/auth/README.md))                        |
-| `packages/app-data`  | `@devdaj/app-data`  | On-device SQLite shared between apps ([README](packages/app-data/README.md))              |
-| `packages/telemetry` | `@devdaj/telemetry` | Errors-only PostHog capture, one key per project ([README](packages/telemetry/README.md)) |
-| `packages/db`        | `@devdaj/db`        | Single Supabase migration history shared by every app ([README](packages/db/README.md))   |
+| Path                 | Package             | Description                                                                                           |
+| -------------------- | ------------------- | ----------------------------------------------------------------------------------------------------- |
+| `apps/web`           | `web`               | Website, admin dashboard and API (`/api/v<n>/...`) ([README](apps/web/README.md))                     |
+| `apps/fitnexx`       | `fitnexx`           | Fitnexx Expo mobile app ([README](apps/fitnexx/README.md))                                            |
+| `packages/auth`      | `@devdaj/auth`      | Shared headless Supabase login ([README](packages/auth/README.md))                                    |
+| `packages/app-data`  | `@devdaj/app-data`  | On-device SQLite shared between apps ([README](packages/app-data/README.md))                          |
+| `packages/telemetry` | `@devdaj/telemetry` | Errors-only PostHog capture, one key per project ([README](packages/telemetry/README.md))             |
+| `packages/crypto`    | `@devdaj/crypto`    | Headless encryption primitives, wrapped keys and sealed batches ([README](packages/crypto/README.md)) |
+| `packages/db`        | `@devdaj/db`        | Single Supabase migration history shared by every app ([README](packages/db/README.md))               |
 
 ## Quick start
 

@@ -91,29 +91,38 @@ pantry items by category, grocery lists built from recipes minus pantry items
 Data lives in AsyncStorage and syncs as plaintext rows through
 `/api/v1/pantry/*` (per-row last write wins). Sign-in is required today.
 
+**Decisions (2026-11-27):**
+
+- Encrypted household sharing is pulled forward into Pantry: per-member key
+  sharing is built here, not deferred to hosted sync.
+- The web app stays and becomes local-first in the browser too: its own
+  browser storage with the same schema and change log, no sibling reads.
+- Canonical ingredients, synonyms, shop sections and pack sizes come from a
+  server-hosted list, cached on the device; user additions stay local.
+
 **Planned, in commit-sized steps:**
 
 1. Move local data from AsyncStorage into `@devdaj/app-data` SQLite with
    `public_v1_*` views (recipes, grocery lists) and the change log.
-2. Optional sign-in: a single-device household works signed out.
-3. Recipe import from structured data (schema.org `Recipe` JSON-LD on recipe
+2. Browser-local storage for the web app on the same schema and change log.
+3. Optional sign-in: a single-device household works signed out.
+4. Recipe import from structured data (schema.org `Recipe` JSON-LD on recipe
    sites) before any parser or model; this becomes the first user of the
    shared import pipeline.
-4. Canonical ingredients with local synonyms (for example "bawang merah" and
-   "shallot"), replacing the plural-stripping name match.
-5. Unit conversion so "200 g" and "0.5 kg" of one ingredient merge.
-6. Quantity-aware pantry subtraction (pantry items gain an optional amount).
-7. Pack-size rounding (need 300 g, buy one 500 g pack).
-8. Shop-section grouping on the grocery list.
-9. Rework household sync onto the encrypted change log; the server keeps only
-   ciphertext.
+5. Ingredient catalog on the server: one Supabase migration, a read-only
+   `/api/v1/pantry/ingredients` endpoint, cached on the device for offline use.
+6. Canonical ingredient matching with local synonyms (for example "bawang
+   merah" and "shallot"), replacing the plural-stripping name match.
+7. Unit conversion so "200 g" and "0.5 kg" of one ingredient merge.
+8. Quantity-aware pantry subtraction (pantry items gain an optional amount).
+9. Pack-size rounding (need 300 g, buy one 500 g pack).
+10. Shop-section grouping on the grocery list.
+11. Encrypted household sync: a random household key wrapped for each
+    member's public key (libsodium), the encrypted change log replacing
+    plaintext rows, and a one-time move of existing households. The server
+    keeps only membership and ciphertext. Needs the encrypted export package
+    from Foundations first.
 
-**Open questions:**
-
-- Household sharing needs per-member key sharing, which the build order places
-  in hosted sync (step 8). Keep today's plaintext household sync until then,
-  or pull the encrypted household work forward?
-- The web PWA has no shared SQLite folder. Keep it as a signed-in, sync-only
-  client, or drop it?
-- Where do canonical ingredients, synonyms and pack sizes come from: a curated
-  list in the repo, the server, or user-built only?
+**Risks:** step 11 is one of the three riskiest pieces in the plan (adding and
+removing members, a member losing their device, key rotation after removal).
+Until it lands, today's plaintext household sync stays as is.

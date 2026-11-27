@@ -292,10 +292,14 @@ sleep quality); Ledger can import refill purchases.
 6. Travel pack calculator.
 7. "Your data" screen and encrypted export on the shared logic.
 
-### 6. Keep-in-touch reminder (new)
+### 6. Kin: keep-in-touch reminder (new)
 
 Contact cadences, birthdays (including lunar dates), a small weekly digest and
 fair rotation so nobody is always the one left out.
+
+**Decisions (2026-11-28):** named Kin (`tech.devdaj.app.kin`); birthdays on
+the Chinese and Hijri calendars as well as Gregorian; the weekly digest
+arrives Sunday evening listing three people, both changeable in settings.
 
 **Core features:**
 
@@ -317,16 +321,13 @@ fair rotation so nobody is always the one left out.
 1. App scaffold with `@devdaj/app-data`, schema, `public_v1_*` views, change
    log, signed-out by default.
 2. People, cadences and the catch-up log, on the recurrence engine.
-3. Lunar date conversion as pure functions with tests (table-based, since
-   on-device `Intl` calendar support is not reliable on every Android build).
+3. Chinese and Hijri date conversion as pure functions with tests
+   (table-based, since on-device `Intl` calendar support is not reliable on
+   every Android build). Official Malaysian Hijri dates can differ from a
+   computed table by a day, so each Hijri birthday allows a one-day
+   adjustment.
 4. Birthdays with reminders.
 5. Fair rotation ranking as pure functions with tests.
 6. Weekly digest notification.
 7. Pick-from-contacts import.
 8. "Your data" screen and encrypted export on the shared logic.
-
-**Open questions:**
-
-- App name (it sets the `tech.devdaj.app.<name>` id).
-- Which lunar calendars: Chinese, Hijri, or both?
-- Digest day and time, and how many people per digest by default?

@@ -331,3 +331,49 @@ arrives Sunday evening listing three people, both changeable in settings.
 6. Weekly digest notification.
 7. Pick-from-contacts import.
 8. "Your data" screen and encrypted export on the shared logic.
+
+### 7. Document expiry vault (new)
+
+Documents with expiry dates and scans, renewal reminders with lead times per
+document type, passport machine-readable zone (MRZ) parsing and a travel
+check.
+
+**Core features:**
+
+- Documents: type, holder, number, issuing country, issue and expiry dates,
+  scans stored through the shared attachment service.
+- Lead times per document type (for example a passport reminder months
+  before expiry, a visa weeks before), editable by the user.
+- MRZ parsing for passports (TD3, two lines of 44 characters): fields
+  extracted and every check digit verified (weights 7, 3, 1), so a misread is
+  caught before saving rather than stored silently.
+- Travel check: trip dates and destination in, warnings out when a passport
+  will not stay valid long enough past the return date or a visa expires
+  during the trip.
+
+**Sibling links (read and import):** Garage's road tax and insurance dates
+appear in the expiry list read-only; a `public_v1_*` view of trips lets
+Pillbox's travel pack calculator import trip dates.
+
+**Planned, in commit-sized steps:**
+
+1. App scaffold with `@devdaj/app-data`, schema, `public_v1_*` views, change
+   log, signed-out by default.
+2. Documents, document types and lead times on the recurrence engine.
+3. Scans on the shared attachment service.
+4. MRZ parser and check digits as pure functions with tests; typed or pasted
+   MRZ first.
+5. Camera MRZ capture feeding the same parser.
+6. Trips and the travel check.
+7. Garage renewals shown read-only; trips view for Pillbox.
+8. "Your data" screen and encrypted export on the shared logic.
+
+**Open questions:**
+
+- App name (it sets the `tech.devdaj.app.<name>` id).
+- Camera MRZ reading: on-device text recognition (a native module, nothing
+  leaves the phone) or typed MRZ only?
+- Scans are the most sensitive files in the plan. Rely on OS encryption like
+  the rest, or encrypt scans with an app key held in the keychain or keystore?
+- Passport validity rules per destination: one editable default (six months
+  past return), or a server-hosted country list?

@@ -50,10 +50,16 @@ Shared pieces, built once and reused. Each lands as its own small commits.
 
 ## Sync and encryption
 
-Built after Garage (build order step 4) and extended for Pantry households.
+Built after Garage (build order step 4), including the hosted transport and
+household keys, so Pantry's encrypted households land before Ledger.
 Today only Fitnexx syncs: a plaintext TCP exchange of whole AsyncStorage
 values between two phones on one network, paired by QR code with a token.
 Pantry syncs plaintext rows through the API. Both move onto this design.
+
+**Decisions (2026-11-28):** the log is written by an app-data write helper
+that records field-level operations (no new dependency); hosted transport and
+household keys move before Ledger; household sync stays free, and hosted sync
+across a person's own devices is the paid tier.
 
 **Design:**
 
@@ -87,7 +93,9 @@ Pantry syncs plaintext rows through the API. Both move onto this design.
 **Planned, in commit-sized steps:**
 
 1. Operation format, HLC and merge rules as pure functions with tests.
-2. Log writer in `@devdaj/app-data`, used by every app from its first release.
+2. Write helper in `@devdaj/app-data` that applies a change and records its
+   operation in one short transaction; every app writes through it from its
+   first release.
 3. Crypto package: data key, Argon2id wrapping, recovery key, batch sealing;
    same API on native and web.
 4. Key storage and sharing between sibling apps.
@@ -98,18 +106,8 @@ Pantry syncs plaintext rows through the API. Both move onto this design.
 9. Log compaction (snapshots so new devices do not replay everything).
 10. Hosted ciphertext transport on the API.
 11. Household keys and membership changes (Pantry's step 11 builds on this).
-12. Hosted sync subscription.
-
-**Open questions:**
-
-- How the log is written: an app-data write helper that records operations
-  (recommended: field-level, no extra dependency), the SQLite session
-  extension (row-level changesets), or a CRDT library such as Automerge or
-  Yjs (heavier, document-shaped)?
-- Pantry households need the hosted transport (step 10) and household keys
-  (step 11) before Ledger in the build order. Move both earlier?
-- Hosted sync is a subscription. Do Pantry households stay free (household
-  sync free, personal multi-device hosted sync paid), or become paid?
+12. Hosted sync subscription for personal multi-device sync (households stay
+    free).
 
 ## Apps
 

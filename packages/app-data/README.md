@@ -98,8 +98,11 @@ newDeviceId })`. Each `write(table, changes)` applies `set`, `increment` and
 `delete` changes and appends the matching operations to `_devdaj_log`, in one
 transaction; `purge()` empties the app's tables and logs a `purge_app`. Calls
 are serialized, and `opsSince(seq)` reads the log back (validated) for sync.
-Each table needs a single primary-key column. Remote operations are not
-applied yet (sync step 6).
+Use `transaction(async (tx) => { ... })` for one user action spanning several
+tables: `tx.write`, `tx.purge`, `tx.getFirst` and `tx.getAll` share the open
+transaction on the same connection, so all writes commit or roll back together.
+A `tx` handle used after its task finishes throws. Each table needs a single
+primary-key column. Remote operations are not applied yet (sync step 6).
 
 ## Development
 

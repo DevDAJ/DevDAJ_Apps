@@ -149,5 +149,10 @@ the mobile clients are `apps/fitnexx/lib/ai.ts` and `lib/foodAnalysisQueue.ts`.
 | POST   | `/api/v1/pantry/households/:id/invites`    | New 7-day invite code                        |
 | DELETE | `/api/v1/pantry/households/:id/members/me` | Leave; deletes an empty household            |
 | POST   | `/api/v1/pantry/households/:id/sync`       | Row-level sync; `{ cursor, rows }`           |
+| GET    | `/api/v1/pantry/households/:id/imports`    | Weekly recipe import usage                   |
+| POST   | `/api/v1/pantry/households/:id/imports`    | `{ url }`; YouTube/TikTok recipe extraction  |
+| POST   | `/api/v1/pantry/recipes/parse`             | `{ text, title? }`; caption parse, no quota  |
 
-All pantry routes require a full DevDAJ account, never guests.
+All pantry routes require a full DevDAJ account, never guests. Recipe imports
+use `PANTRY_YOUTUBE_API_KEY` and the shared `OPENROUTER_API_KEY`; the fallback
+model comes from `PANTRY_RECIPE_MODEL` (see `apps/web/.env.example`).

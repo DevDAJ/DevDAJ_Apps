@@ -78,3 +78,42 @@ gyms, LAN sync, Pro AI chat. Shared tables in `data.db`: `meals`, `workouts`,
 **Open questions:** which tables siblings actually need in `public_v1`
 (`preferences` probably stays internal); moving-average window; the
 progression rule set.
+
+### 2. Pantry Helper (in progress)
+
+Recipes, pantry and grocery lists for a household; the brief's "grocery list
+generator".
+
+**Shipped:** recipe import from YouTube and TikTok links (deterministic
+parser with English and Malay section headers, model fallback on the server),
+pantry items by category, grocery lists built from recipes minus pantry items
+(name match, same-unit quantities merged), households with invites, web PWA.
+Data lives in AsyncStorage and syncs as plaintext rows through
+`/api/v1/pantry/*` (per-row last write wins). Sign-in is required today.
+
+**Planned, in commit-sized steps:**
+
+1. Move local data from AsyncStorage into `@devdaj/app-data` SQLite with
+   `public_v1_*` views (recipes, grocery lists) and the change log.
+2. Optional sign-in: a single-device household works signed out.
+3. Recipe import from structured data (schema.org `Recipe` JSON-LD on recipe
+   sites) before any parser or model; this becomes the first user of the
+   shared import pipeline.
+4. Canonical ingredients with local synonyms (for example "bawang merah" and
+   "shallot"), replacing the plural-stripping name match.
+5. Unit conversion so "200 g" and "0.5 kg" of one ingredient merge.
+6. Quantity-aware pantry subtraction (pantry items gain an optional amount).
+7. Pack-size rounding (need 300 g, buy one 500 g pack).
+8. Shop-section grouping on the grocery list.
+9. Rework household sync onto the encrypted change log; the server keeps only
+   ciphertext.
+
+**Open questions:**
+
+- Household sharing needs per-member key sharing, which the build order places
+  in hosted sync (step 8). Keep today's plaintext household sync until then,
+  or pull the encrypted household work forward?
+- The web PWA has no shared SQLite folder. Keep it as a signed-in, sync-only
+  client, or drop it?
+- Where do canonical ingredients, synonyms and pack sizes come from: a curated
+  list in the repo, the server, or user-built only?

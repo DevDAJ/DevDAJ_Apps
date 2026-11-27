@@ -1,6 +1,6 @@
 /** Pieces every app page uses; each page dresses them in its own world. */
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Download } from "lucide-react";
+import { ArrowLeft, Download, Globe } from "lucide-react";
 import { APPS, type AppEntry, findApp, type Transfer } from "@/catalog";
 import { cn } from "@/lib/utils";
 
@@ -32,7 +32,7 @@ export function BackLink({ className }: { className?: string }) {
   );
 }
 
-/** Store links, or an honest "nothing to download yet" when the app has none. */
+/** Store links and the web app link, or an honest "nothing to download yet" when there are none. */
 export function StoreButtons({
   app,
   buttonClass,
@@ -43,7 +43,7 @@ export function StoreButtons({
   emptyClass: string;
 }) {
   const { googlePlay, appStore } = app.stores;
-  if (!googlePlay && !appStore)
+  if (!googlePlay && !appStore && !app.webApp)
     return <span className={emptyClass}>Not out yet: nothing to download</span>;
   return (
     <>
@@ -57,6 +57,12 @@ export function StoreButtons({
         <a href={appStore.url} rel="noopener" className={buttonClass}>
           <Download className="size-5" aria-hidden />
           Download on the App Store
+        </a>
+      )}
+      {app.webApp && (
+        <a href={app.webApp.url} className={buttonClass}>
+          <Globe className="size-5" aria-hidden />
+          Open the web app
         </a>
       )}
     </>

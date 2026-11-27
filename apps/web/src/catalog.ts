@@ -31,6 +31,8 @@ export interface AppEntry {
     /** Numeric App Store id ("Apple Identifier" in Sales reports). */
     appStore?: { appleId: string; url: string };
   };
+  /** Installable web app (PWA), same account as the phone app. */
+  webApp?: { url: string };
   highlights: string[];
   line: LineColor;
   /** Short station names for the network map: what this line carries. */
@@ -91,14 +93,21 @@ export const APPS: readonly AppEntry[] = [
   {
     slug: "pantry",
     name: "Pantry Helper",
-    tagline: "Know what's in the cupboard.",
-    description: "Keep track of groceries and expiry dates, and plan meals around what you have.",
-    status: "coming_soon",
+    tagline: "Recipes, pantry and groceries for the whole household.",
+    description:
+      "Save recipes from YouTube and TikTok captions or write your own, keep track of what is in the pantry, and turn tonight's recipes into a grocery list that skips what you already have. Everyone in the household sees the same lists.",
+    status: "beta",
     bundleId: bundleId("pantry"),
     stores: {},
-    highlights: ["Expiry reminders", "Shares meal data with Fitnexx"],
+    webApp: { url: "/pantry/app/" },
+    highlights: [
+      "Save recipes from YouTube and TikTok captions, or write your own",
+      "Pantry, spices and aromatics, cold storage and meats in one place",
+      "Grocery lists from your recipes, minus what you already have",
+      "One household, shared with everyone who cooks",
+    ],
     line: "green",
-    stops: ["Groceries", "Expiry dates"],
+    stops: ["Recipes", "Pantry", "Groceries"],
     transfers: [
       {
         with: "fitnexx",

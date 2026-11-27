@@ -12,6 +12,12 @@
       "runtimeExecutable": "bun",
       "runtimeArgs": ["run", "--cwd", "apps/pantry", "web"],
       "port": 8081
+    },
+    {
+      "name": "web-prod",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["apps/web/server.ts"],
+      "port": 3001
     }
   ]
 }

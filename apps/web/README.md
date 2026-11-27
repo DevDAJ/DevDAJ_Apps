@@ -28,6 +28,12 @@ Apply the shared schema migrations from [`packages/db`](../../packages/db)
 
 Add an app by adding it to `src/catalog.ts` (its store ids drive the metrics sync too).
 
+## Pantry Helper web app
+
+In production the same server serves `/pantry/app/` from the Pantry web export. Run
+`vp run pantry#build` or `bun run ready` first. `vp dev` does not serve it; use the Expo dev server
+(`vp run pantry#dev`, then `w`) while working on the PWA.
+
 ## Layout
 
 ```

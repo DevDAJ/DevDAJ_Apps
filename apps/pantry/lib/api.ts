@@ -1,3 +1,5 @@
+import { Platform } from "react-native";
+
 import type { SyncRow } from "./types";
 import { requireSupabase } from "./supabase";
 
@@ -17,13 +19,15 @@ export class ApiRequestError extends Error {
 
 async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const apiUrl = process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, "");
-  if (!apiUrl) throw new Error("The Pantry API URL is not configured.");
+  if (!apiUrl && Platform.OS !== "web") {
+    throw new Error("The Pantry API URL is not configured.");
+  }
   const { data } = await requireSupabase().auth.getSession();
   if (!data.session) throw new Error("Sign in to use Pantry Helper.");
   const headers = new Headers(init?.headers);
   headers.set("Authorization", `Bearer ${data.session.access_token}`);
   headers.set("Content-Type", "application/json");
-  const response = await fetch(`${apiUrl}${BASE_PATH}${path}`, { ...init, headers });
+  const response = await fetch(`${apiUrl ?? ""}${BASE_PATH}${path}`, { ...init, headers });
   const result = (await response.json().catch(() => ({}))) as T & {
     error?: string;
     code?: string;

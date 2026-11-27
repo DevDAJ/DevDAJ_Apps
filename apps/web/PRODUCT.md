@@ -31,7 +31,7 @@ ones you need. Each app keeps its own SQLite database in a shared, key-encrypted
 ## Operating Context
 
 - Apps: Fitnexx (fitness tracker, beta, Android), Finance Tracker (coming soon), Pantry Helper
-  (coming soon). Source of truth: `src/catalog.ts`.
+  (beta, web app; phone builds coming). Source of truth: `src/catalog.ts`.
 - Sync options per user: Native sync (default iOS/Android, short-lived), Google Drive (user
   provided), DevDAJ Sync (fully encrypted, only the user's key can decrypt).
 - AI helpers are opt-in, not the default: a small free daily allowance (no ads, ever) or a monthly

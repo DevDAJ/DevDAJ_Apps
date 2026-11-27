@@ -1,13 +1,14 @@
 {
   "name": "Pantry Helper",
   "short_name": "Pantry",
-  "start_url": "/",
+  "start_url": "/pantry/app/",
+  "scope": "/pantry/app/",
   "display": "standalone",
   "background_color": "#0b100c",
   "theme_color": "#0b100c",
   "icons": [
     {
-      "src": "/icon.svg",
+      "src": "/pantry/app/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"

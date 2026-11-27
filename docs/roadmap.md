@@ -332,11 +332,17 @@ arrives Sunday evening listing three people, both changeable in settings.
 7. Pick-from-contacts import.
 8. "Your data" screen and encrypted export on the shared logic.
 
-### 7. Document expiry vault (new)
+### 7. Papers: document expiry vault (new)
 
 Documents with expiry dates and scans, renewal reminders with lead times per
 document type, passport machine-readable zone (MRZ) parsing and a travel
 check.
+
+**Decisions (2026-11-28):** named Papers (`tech.devdaj.app.papers`); camera
+MRZ reading by on-device text recognition, with typed MRZ as the fallback;
+scans additionally encrypted with an app key held in the iOS keychain or
+Android keystore; passport validity checked against an editable default of
+six months past the return date.
 
 **Core features:**
 
@@ -348,7 +354,8 @@ check.
   extracted and every check digit verified (weights 7, 3, 1), so a misread is
   caught before saving rather than stored silently.
 - Travel check: trip dates and destination in, warnings out when a passport
-  will not stay valid long enough past the return date or a visa expires
+  will not stay valid long enough past the return date (six months by
+  default, editable per trip) or a visa expires
   during the trip.
 
 **Sibling links (read and import):** Garage's road tax and insurance dates
@@ -360,20 +367,14 @@ Pillbox's travel pack calculator import trip dates.
 1. App scaffold with `@devdaj/app-data`, schema, `public_v1_*` views, change
    log, signed-out by default.
 2. Documents, document types and lead times on the recurrence engine.
-3. Scans on the shared attachment service.
+3. Scans on the shared attachment service, encrypted with the app key
+   (libsodium). The key is included, passphrase-wrapped, in encrypted exports
+   and sync: an Android reinstall wipes keystore keys, so without a restore
+   the scans could not be opened.
 4. MRZ parser and check digits as pure functions with tests; typed or pasted
    MRZ first.
-5. Camera MRZ capture feeding the same parser.
+5. Camera MRZ capture by on-device text recognition (app-local native
+   module) feeding the same parser.
 6. Trips and the travel check.
 7. Garage renewals shown read-only; trips view for Pillbox.
 8. "Your data" screen and encrypted export on the shared logic.
-
-**Open questions:**
-
-- App name (it sets the `tech.devdaj.app.<name>` id).
-- Camera MRZ reading: on-device text recognition (a native module, nothing
-  leaves the phone) or typed MRZ only?
-- Scans are the most sensitive files in the plan. Rely on OS encryption like
-  the rest, or encrypt scans with an app key held in the keychain or keystore?
-- Passport validity rules per destination: one editable default (six months
-  past return), or a server-hosted country list?

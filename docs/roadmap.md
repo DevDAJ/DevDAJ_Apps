@@ -168,11 +168,18 @@ the document vault's travel and expiry checks.
 8. Local notifications from the recurrence engine.
 9. "Your data" screen and encrypted export on the shared logic.
 
-### 4. Finance tracker (new)
+### 4. Ledger: finance tracker (new)
 
 Transactions, budgets, Malaysian tax relief tracking and a year-end export,
 with transactions captured from bank and wallet notifications on Android.
 Targeted around the end of September; the largest app in the plan.
+
+**Decisions (2026-11-28):** named Ledger (`tech.devdaj.app.ledger`);
+multi-currency from the start (each account has a currency, totals convert to
+a home currency, MYR by default); tax relief categories and per-year limits
+are a server-hosted list, cached on the device; CSV and PDF statements both
+supported in the first import; first templates for Maybank, CIMB, Touch 'n Go
+eWallet and GrabPay.
 
 **Core features:**
 
@@ -213,30 +220,29 @@ grocery spend, imported as transactions that point back to their source.
    policy for notification access before going further.
 2. App scaffold with `@devdaj/app-data`, schema, `public_v1_*` views, change
    log, signed-out by default.
-3. Accounts and manual transactions with all six types.
-4. Categories and budgets.
-5. Template engine: slot-only pattern matching as pure functions with tests
+3. Accounts (each with a currency) and manual transactions with all six
+   types; amounts stored as integer minor units with their currency code.
+4. Exchange rates and home-currency totals.
+5. Categories and budgets.
+6. Template engine: slot-only pattern matching as pure functions with tests
    (app-local, since templates are finance-specific).
-6. Capture inbox and the tap-to-build template editor.
-7. Duplicate linking and own-account transfer pairing.
-8. Tax relief categories, per-year limits and the year-end export.
-9. Receipt and invoice photos on the shared attachment service, through the
-   import pipeline (parser first, model fallback, line items must sum to the
-   total, user confirms, cached by image hash).
-10. Invoices as expected income, matching and overdue reminders (recurrence
+7. Capture inbox and the tap-to-build template editor; first templates for
+   Maybank, CIMB, Touch 'n Go eWallet and GrabPay.
+8. Duplicate linking and own-account transfer pairing.
+9. Tax relief catalog on the server (one Supabase migration and a read-only
+   endpoint, cached on the device), category tagging and the year-end export.
+10. Receipt and invoice photos on the shared attachment service, through the
+    import pipeline (parser first, model fallback, line items must sum to the
+    total, user confirms, cached by image hash).
+11. Invoices as expected income, matching and overdue reminders (recurrence
     engine).
-11. Statement import and reconciliation.
-12. iOS share and paste fallback.
-13. Imports from Garage and Pantry.
-14. Community template library: repository format, on-device scrubbing,
-    sample tests, breakage detection.
+12. Statement import (CSV and PDF; PDF through the import pipeline with
+    totals checked against the statement) and reconciliation.
+13. iOS share and paste fallback.
+14. Imports from Garage and Pantry.
+15. Community template library: repository format, on-device scrubbing,
+    sample tests, breakage detection; seeded with the step 7 templates.
 
-**Open questions:**
-
-- App name (it sets the `tech.devdaj.app.<name>` id).
-- Currency: MYR only, or multi-currency accounts?
-- Tax relief limits per assessment year: shipped in the app, or a
-  server-hosted list like Pantry's ingredient catalog?
-- Statement formats to support first: CSV, PDF, or both (most Malaysian banks
-  issue PDF)?
-- Which banks and wallets to target first for templates?
+**Open question:** where exchange rates come from (a server endpoint caching
+a public daily rate, e.g. Bank Negara Malaysia, or rates entered per
+transaction).

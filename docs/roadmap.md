@@ -123,23 +123,37 @@ gyms, LAN sync, Pro AI chat. Shared tables in `data.db`: `meals`, `workouts`,
 `workout_exercises`, `workout_sets`, `body_metrics`, `water_log`,
 `preferences`.
 
+**Decisions (2026-11-28):**
+
+- Siblings get minimal summaries: `public_v1_workouts` (date, title,
+  duration, volume), `public_v1_daily_nutrition` (date, calorie and macro
+  totals) and `public_v1_body_weight` (date, weight). Sets, meals, profile
+  fields (age, sex, height) and preferences stay internal. Views only bind
+  well-behaved readers: on iOS any sibling can open the whole file, so
+  internal tables that must stay private move to a separate, non-shared
+  database.
+- Weight trend: exponentially weighted average, 10% weight on each new
+  reading (roughly a 10-day window), which copes with missed days.
+- Progression: double progression. Each exercise has a rep range; add reps
+  until every working set reaches the top, then add the smallest weight step
+  and return to the bottom of the range.
+
 **Planned, in commit-sized steps:**
 
-1. Publish `public_v1_*` views over the shared tables; siblings switch to them.
+1. Publish the three `public_v1_*` views, move private tables to a non-shared
+   database, and update AGENTS.md rule 7 (views, not tables, are the public
+   API).
 2. Write the change log for every insert, update and delete.
 3. Exclude `data.db` from cloud backup.
 4. "Your data" screen on the shared headless logic.
 5. Encrypted export/restore replacing the plain export.
 6. Optional sign-in: every screen works signed out; Pro and sync ask for an
    account.
-7. Weight trend with a moving average.
-8. Progression rules (suggest the next weight or reps from recent sets).
+7. Weight trend with the exponentially weighted average.
+8. Double progression: rep range per exercise and the next-session
+   suggestion.
 9. Verified local food data: cache barcode results on the device so known
    foods work offline.
-
-**Open questions:** which tables siblings actually need in `public_v1`
-(`preferences` probably stays internal); moving-average window; the
-progression rule set.
 
 ### 2. Pantry Helper (in progress)
 

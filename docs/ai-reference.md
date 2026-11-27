@@ -46,8 +46,9 @@ table. Verify against the code before relying on any detail here.
    anonymous (no person profiles, no user ids), no-op without a key.
 6. Guests never get Pro or a food-analysis allowance; Pro routes require a
    full account.
-7. Shared SQLite tables are a public API: add columns, never rename or
-   remove. Secrets and private data stay out of the shared database.
+7. Siblings read only versioned `public_v<n>_*` views in an app's shared
+   `data.db`; never edit a published view, add the next version beside it.
+   Secrets and private data stay out of the shared database.
 8. Secrets server-side only; RLS enabled, service-role access explicit.
 9. `bun run ready` green before every commit; the vp formatter is
    authoritative.

@@ -46,6 +46,26 @@ describe("fitnexx v1 auth", () => {
   });
 });
 
+describe("pantry v1 auth", () => {
+  const id = "11111111-1111-4111-8111-111111111111";
+  const message = "Sign in to use Pantry Helper.";
+
+  test.each([
+    ["GET", "/v1/pantry/households", message],
+    ["POST", "/v1/pantry/households", message],
+    ["POST", "/v1/pantry/households/join", message],
+    ["GET", `/v1/pantry/households/${id}/members`, message],
+    ["POST", `/v1/pantry/households/${id}/invites`, message],
+    ["DELETE", `/v1/pantry/households/${id}/members/me`, message],
+    ["POST", `/v1/pantry/households/${id}/sync`, message],
+  ])("%s %s requires a bearer token", async (method, path, expected) => {
+    const init = method === "GET" ? { method } : json(method, {});
+    const res = await call(path, init);
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: expected });
+  });
+});
+
 describe("fitnexx v1 body limits", () => {
   test("rejects oversized JSON with 413", async () => {
     const res = await call("/v1/fitnexx/food-analysis", json("PUT", { pad: "x".repeat(3_000) }));

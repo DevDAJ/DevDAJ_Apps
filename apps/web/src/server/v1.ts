@@ -1,5 +1,6 @@
 import { Elysia } from "elysia";
 import { fitnexxV1 } from "./apps/fitnexx/v1";
+import { pantryV1 } from "./apps/pantry/v1";
 import { datasetV1 } from "./platform/dataset/routes";
 import { adminV1 } from "./platform/routes";
 
@@ -10,5 +11,6 @@ import { adminV1 } from "./platform/routes";
  */
 export const v1 = new Elysia({ name: "api.v1", prefix: "/v1" })
   .use(fitnexxV1)
+  .use(pantryV1)
   .use(datasetV1)
   .use(adminV1);

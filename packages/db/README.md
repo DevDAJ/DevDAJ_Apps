@@ -22,6 +22,7 @@ supabase/migrations/     the single ordered schema history
 | 20261119000000 | web     | `20261119000000_platform.sql`             | `dataset_gyms`, `dataset_contributions`, `app_store_metrics`                     |
 | 20261123000000 | fitnexx | `20261123000000_food_scanner.sql`         | `food_component` library, `food_scan_component` portions, usage tracking         |
 | 20261123000001 | fitnexx | `20261123000001_bug_report_telemetry.sql` | `bug_report` correlation columns for PostHog error events                        |
+| 20261127000000 | pantry  | `20261127000000_pantry.sql`               | Households, invite codes, recipe cache, weekly imports and sync rows             |
 
 ## Applying migrations
 

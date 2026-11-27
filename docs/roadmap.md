@@ -248,11 +248,17 @@ grocery spend, imported as transactions that point back to their source.
 15. Community template library: repository format, on-device scrubbing,
     sample tests, breakage detection; seeded with the step 7 templates.
 
-### 5. Medication and supplement tracker (new)
+### 5. Pillbox: medication and supplement tracker (new)
 
 Schedules, a dose log, stock countdown, run-out dates, refill planning and a
 travel pack calculator. It records what the user sets up and never advises:
 no medical advice, no dosing suggestions, no model anywhere near doses.
+
+**Decisions (2026-11-28):** named Pillbox (`tech.devdaj.app.pillbox`);
+each item chooses how it follows time zones (same local clock time by
+default, or same interval since the last dose for time-critical items); a
+carer view waits for the hosted sync phase, reusing Pantry's per-member key
+sharing.
 
 **Core features:**
 
@@ -277,18 +283,11 @@ sleep quality); Ledger can import refill purchases.
 
 1. App scaffold with `@devdaj/app-data`, schema, `public_v1_*` views, change
    log, signed-out by default.
-2. Items and schedules on the recurrence engine (adding every-N-days and
-   on/off cycles to it if Garage has not needed them).
+2. Items and schedules on the recurrence engine, with the per-item time zone
+   rule (adding every-N-days and on/off cycles to the engine if Garage has
+   not needed them).
 3. Dose log with notification actions (taken, skip, snooze).
 4. Stock as decrement operations, refills that add stock, run-out dates.
 5. Refill reminders.
 6. Travel pack calculator.
 7. "Your data" screen and encrypted export on the shared logic.
-
-**Open questions:**
-
-- App name (it sets the `tech.devdaj.app.<name>` id).
-- Travelling across time zones: keep doses at the same local clock time, or
-  at the same interval since the last dose (per item, or one setting)?
-- Should a carer view (another person seeing the dose log through hosted
-  sharing) be planned now, or left to the hosted sync phase?

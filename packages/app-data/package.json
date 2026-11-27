@@ -11,6 +11,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./shared": "./src/shared.ts",
+    "./changelog": "./src/changelog.ts",
     "./app.plugin.js": "./app.plugin.js",
     "./package.json": "./package.json"
   },

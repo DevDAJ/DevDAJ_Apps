@@ -80,6 +80,16 @@ if (await appData.has("fitnexx")) {
   Android's SQLite are separate copies in the same process, and closing one copy's file handle would
   drop the other's locks.
 
+## Change log (`@devdaj/app-data/changelog`)
+
+Pure functions for sync, importable without Expo: a hybrid logical clock
+(`hlcTick`, `hlcReceive`, sortable `encodeHlc` strings), the `Operation`
+format (`set`, `increment`, `delete`, `purge_app`) with `parseOperation` for
+untrusted input, and the merge rules (`applyOps`, `materialize`). Fields merge
+last writer wins by HLC, counters merge as increments, deletes and app purges
+hide everything older. Any order of the same operations gives the same result.
+Design: [docs/roadmap.md](../../docs/roadmap.md#sync-and-encryption).
+
 ## Development
 
 From `packages/app-data`: `vp test`, `tsc --noEmit`. From the repo root:

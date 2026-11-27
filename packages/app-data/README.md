@@ -30,7 +30,7 @@ await db.runAsync("INSERT OR REPLACE INTO daily_totals VALUES (?, ?)", ["2026-11
 if (await appData.has("fitnexx")) {
   const rows = await appData.query<{ calories: number }>(
     "fitnexx",
-    "SELECT calories FROM daily_totals WHERE day = ?",
+    "SELECT calories FROM public_v1_daily_nutrition WHERE day = ?",
     ["2026-11-18"],
   );
 }
@@ -72,7 +72,8 @@ if (await appData.has("fitnexx")) {
 
 - **Everything in `data.db` is readable by the other apps.** Keep secrets and private data in a
   separate database or AsyncStorage.
-- Other apps only read. Each app owns its schema; treat its tables as a public API and only add columns.
+- Other apps only read, and only `public_v<n>_*` views. Each app owns its schema and may change
+  its tables freely; a breaking change to a view adds `public_v<n+1>_*` beside the old one.
 - Values crossing apps are `TEXT`, `INTEGER`, `REAL` or `NULL`. BLOBs aren't shared (on Android they read back as `null`).
 - Keep write transactions short. iOS terminates an app that is suspended while holding a lock in
   the shared container.

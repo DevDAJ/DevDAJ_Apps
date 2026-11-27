@@ -38,7 +38,8 @@ UI belongs in the app.
 
 | Tier                       | What lives there                                                                       | Rules                                                               |
 | -------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| Shared SQLite (`app-data`) | Workouts, meals, metrics, water, gyms: data other apps read                            | Public API: add columns, never rename or remove; no secrets         |
+| Shared SQLite (`app-data`) | Summary tables behind `public_v1_*` views (Fitnexx: workouts, daily nutrition, weight) | Views are the API: never edit one, add `public_v2_*`; no secrets    |
+| Private SQLite             | Each app's full data (Fitnexx: workouts with sets, meals, body metrics, water)         | Not readable by other apps; the app publishes summaries from it     |
 | Private AsyncStorage       | Templates, settings, reminders, Pro cache, sync secrets, AI settings/usage, food queue | Device-local; the food queue is excluded from backups and peer sync |
 | Supabase (server)          | Accounts, entitlements, bug reports, food scans, component library, dataset, metrics   | RLS enabled; clients never touch service-role tables directly       |
 

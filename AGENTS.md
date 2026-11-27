@@ -50,8 +50,11 @@ vp run <workspace>#<script>  # e.g. vp run web#test, vp run web#typecheck
    responses are not captured.
 6. **Guests never get Pro or a food-analysis allowance.** Pro routes require
    a full account (`pro: true`).
-7. **Shared SQLite tables are a public API**: add columns, never rename or
-   remove. Secrets stay out of the shared database and out of client env.
+7. **Versioned views are the cross-app API.** Siblings read only
+   `public_v<n>_*` views in an app's shared `data.db`; never edit a published
+   view, add `public_v<n+1>_*` beside it. Full and private data stays in the
+   app's private database. Secrets stay out of the shared database and out of
+   client env.
 8. **No secrets in code, logs or commits.** Server app config uses `<APP>_`
    prefixes via `env.ts`; mobile public values `EXPO_PUBLIC_*`; browser
    `VITE_*`. New vars get a commented entry in the root `.env.example`.

@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <meta name="theme-color" content="#0b100c" />
     <title>Pantry Helper</title>
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" href="/icon.svg" />
+    <link rel="manifest" href="/pantry/app/manifest.json" />
+    <link rel="icon" href="/pantry/app/icon.svg" />
     <!-- Expo's default web reset: React Native layouts need a full-height flex root. -->
     <style>
       html,
@@ -32,7 +32,9 @@
         (location.protocol === "https:" || location.hostname === "localhost")
       ) {
         window.addEventListener("load", function () {
-          navigator.serviceWorker.register("/sw.js").catch(function () {});
+          navigator.serviceWorker
+            .register("/pantry/app/sw.js", { scope: "/pantry/app/" })
+            .catch(function () {});
         });
       }
     </script>

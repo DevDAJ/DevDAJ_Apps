@@ -90,6 +90,16 @@ last writer wins by HLC, counters merge as increments, deletes and app purges
 hide everything older. Any order of the same operations gives the same result.
 Design: [docs/roadmap.md](../../docs/roadmap.md#sync-and-encryption).
 
+## Write helper (`@devdaj/app-data/writer`)
+
+Every app writes its own tables through `openWriter(db, { app, keys,
+newDeviceId })`. Each `write(table, changes)` applies `set`, `increment` and
+`delete` changes and appends the matching operations to `_devdaj_log`, in one
+transaction; `purge()` empties the app's tables and logs a `purge_app`. Calls
+are serialized, and `opsSince(seq)` reads the log back (validated) for sync.
+Each table needs a single primary-key column. Remote operations are not
+applied yet (sync step 6).
+
 ## Development
 
 From `packages/app-data`: `vp test`, `tsc --noEmit`. From the repo root:

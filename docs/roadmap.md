@@ -462,10 +462,14 @@ bullets from templates, with an optional model rewrite opted into per bullet.
 7. Review filters.
 8. "Your data" screen and encrypted export on the shared logic.
 
-### 10. Wardrobe and outfit planner (new)
+### 10. Closet: wardrobe and outfit planner (new)
 
 A clothing catalog, outfit builder, wear log, cost per wear and rule-based
 outfit suggestions.
+
+**Decisions (2026-11-28):** named Closet (`tech.devdaj.app.closet`); weather
+through a server proxy with a coarse location; optional model tagging of item
+photos, opted into per photo.
 
 **Core features:**
 
@@ -491,15 +495,11 @@ to fill price and purchase date.
 4. Outfit builder.
 5. Wear log and cost per wear.
 6. Suggestion rules as pure functions with tests.
-7. Weather for the suggestions.
-8. Import purchases from Ledger.
-9. "Your data" screen and encrypted export on the shared logic.
-
-**Open questions:**
-
-- App name (it sets the `tech.devdaj.app.<name>` id).
-- Weather source: the phone calls a free forecast service directly with a
-  coarse location, or the server proxies it so the provider never sees the
-  user's IP address?
-- Optional model tagging of new item photos (category, colour, formality),
-  opt-in per photo, or plain code and manual tags only?
+7. Weather for the suggestions: a server proxy that takes a location rounded
+   to about 10 km, caches the forecast per area and works signed out
+   (rate-limited), so the forecast provider never sees the user's IP address.
+8. Optional model tagging of one photo (category, colours, formality): a
+   signed-in, rate-limited server endpoint (OpenRouter with ZDR), cached by
+   image hash, tags confirmed by the user before saving.
+9. Import purchases from Ledger.
+10. "Your data" screen and encrypted export on the shared logic.

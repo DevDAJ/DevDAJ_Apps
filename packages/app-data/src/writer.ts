@@ -39,6 +39,17 @@ export type Change =
   | { kind: "increment"; row: string; field: string; by: number }
   | { kind: "delete"; row: string };
 
+/** Writes and reads inside one open writer transaction. */
+export interface WriterTransaction {
+  /** Applies and logs changes to one table inside the open transaction. */
+  write(table: string, changes: Change[]): Promise<Operation[]>;
+  /** Deletes every row of every keyed table and logs one purge_app, inside the open transaction. */
+  purge(): Promise<Operation>;
+  /** Read helpers on the same connection, inside the transaction. */
+  getFirst<T>(sql: string, params?: SqlValue[]): Promise<T | null>;
+  getAll<T>(sql: string, params?: SqlValue[]): Promise<T[]>;
+}
+
 /** Applies local changes and records the matching operations in one transaction. */
 export interface Writer {
   readonly device: string;
@@ -46,6 +57,8 @@ export interface Writer {
   write(table: string, changes: Change[]): Promise<Operation[]>;
   /** Deletes every row of every table in `keys` and logs one purge_app operation. */
   purge(): Promise<Operation>;
+  /** Runs `task` in one serialized transaction; every write inside it commits or rolls back together. */
+  transaction<T>(task: (tx: WriterTransaction) => Promise<T>): Promise<T>;
   /** Logged operations with seq > afterSeq, oldest first, at most `limit` (default 500). */
   opsSince(afterSeq: number, limit?: number): Promise<{ seq: number; op: Operation }[]>;
 }
@@ -128,6 +141,13 @@ export async function openWriter(db: WriterDb, options: WriterOptions): Promise<
     return run;
   }
 
+  function checkWrite(table: string, changes: Change[]): string {
+    const keyColumn = keyColumnOf(keys, table);
+    if (keyColumn === undefined) throw new Error(`Unknown table: ${table}`);
+    validateChanges(table, keyColumn, changes, device);
+    return keyColumn;
+  }
+
   function buildOp(table: string, change: Change, hlc: string): Operation {
     const base = { id: hlc, hlc, app, table, row: change.row };
     switch (change.kind) {
@@ -183,53 +203,82 @@ export async function openWriter(db: WriterDb, options: WriterOptions): Promise<
     }
   }
 
-  return {
-    device,
-
-    async write(table: string, changes: Change[]): Promise<Operation[]> {
-      if (changes.length === 0) return [];
-      const keyColumn = keyColumnOf(keys, table);
-      if (keyColumn === undefined) throw new Error(`Unknown table: ${table}`);
-      validateChanges(table, keyColumn, changes, device);
-
-      return serial(async () => {
-        let result: Operation[] = [];
-        await db.withTransactionAsync(async () => {
-          let prev = await previousHlc();
+  function transaction<T>(task: (tx: WriterTransaction) => Promise<T>): Promise<T> {
+    return serial(async () => {
+      let open = false;
+      let prev: Hlc | null = null;
+      const ensureOpen = (): void => {
+        if (!open) throw new Error("Writer transaction is closed");
+      };
+      const nextHlc = (): string => {
+        const ticked = hlcTick(prev, now(), device);
+        prev = ticked;
+        return encodeHlc(ticked);
+      };
+      const tx: WriterTransaction = {
+        async write(table: string, changes: Change[]): Promise<Operation[]> {
+          ensureOpen();
+          if (changes.length === 0) return [];
+          const keyColumn = checkWrite(table, changes);
           const ops: Operation[] = [];
           for (const change of changes) {
-            const ticked = hlcTick(prev, now(), device);
-            prev = ticked;
-            ops.push(buildOp(table, change, encodeHlc(ticked)));
+            ops.push(buildOp(table, change, nextHlc()));
           }
           await setMeta("hlc", ops[ops.length - 1].hlc);
           for (const op of ops) {
             await applyOp(table, keyColumn, op);
             await logOp(op);
           }
-          result = ops;
-        });
-        return result;
-      });
-    },
-
-    async purge(): Promise<Operation> {
-      return serial(async () => {
-        let result!: Operation;
-        await db.withTransactionAsync(async () => {
-          const prev = await previousHlc();
-          const encoded = encodeHlc(hlcTick(prev, now(), device));
+          return ops;
+        },
+        async purge(): Promise<Operation> {
+          ensureOpen();
+          const encoded = nextHlc();
           const op = parseOperation({ id: encoded, hlc: encoded, app, kind: "purge_app" });
           await setMeta("hlc", encoded);
           for (const table of Object.keys(keys)) {
             await db.runAsync(`DELETE FROM "${table}"`, []);
           }
           await logOp(op);
-          result = op;
+          return op;
+        },
+        async getFirst<T>(sql: string, params: SqlValue[] = []): Promise<T | null> {
+          ensureOpen();
+          return db.getFirstAsync<T>(sql, params);
+        },
+        async getAll<T>(sql: string, params: SqlValue[] = []): Promise<T[]> {
+          ensureOpen();
+          return db.getAllAsync<T>(sql, params);
+        },
+      };
+      let result!: T;
+      try {
+        await db.withTransactionAsync(async () => {
+          open = true;
+          prev = await previousHlc();
+          result = await task(tx);
         });
-        return result;
-      });
+      } finally {
+        open = false;
+      }
+      return result;
+    });
+  }
+
+  return {
+    device,
+
+    async write(table: string, changes: Change[]): Promise<Operation[]> {
+      if (changes.length === 0) return [];
+      checkWrite(table, changes);
+      return transaction((tx) => tx.write(table, changes));
     },
+
+    async purge(): Promise<Operation> {
+      return transaction((tx) => tx.purge());
+    },
+
+    transaction,
 
     async opsSince(afterSeq: number, limit = 500): Promise<{ seq: number; op: Operation }[]> {
       const rows = await db.getAllAsync<{ seq: number; op: string }>(

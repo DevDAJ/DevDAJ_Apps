@@ -2,7 +2,13 @@ import { DatabaseSync } from "node:sqlite";
 import { describe, expect, test, vi } from "vite-plus/test";
 import { applyOps, emptyState, materializeTable, type Operation } from "./changelog";
 import type { SqlValue } from "./shared";
-import { openWriter, type Change, type WriterDb, type WriterOptions } from "./writer";
+import {
+  openWriter,
+  type Change,
+  type WriterDb,
+  type WriterOptions,
+  type WriterTransaction,
+} from "./writer";
 
 const APP = "fitnexx";
 const KEYS = { items: "id", others: "id" };
@@ -188,6 +194,135 @@ describe("writer writes and logs", () => {
       ["hlc"],
     );
     expect(meta).toBeNull();
+  });
+});
+
+describe("transactions", () => {
+  test("one transaction writes two tables and reads inside it", async () => {
+    const { raw, db } = setup();
+    raw.exec("CREATE TABLE children (id TEXT PRIMARY KEY, name TEXT NOT NULL DEFAULT '');");
+    const w = await openWriter(db, {
+      app: APP,
+      keys: { items: "id", children: "id" },
+      newDeviceId: () => "dev_a",
+      now: () => 1000,
+    });
+
+    const { ops, children } = await w.transaction(async (tx) => {
+      const first = await tx.write("items", [{ kind: "set", row: "a", fields: { name: "A" } }]);
+      const second = await tx.write("children", [{ kind: "set", row: "c", fields: { name: "C" } }]);
+      const children = await tx.getAll<{ id: string; name: string }>(
+        "SELECT id, name FROM children ORDER BY id",
+        [],
+      );
+      return { ops: [...first, ...second], children };
+    });
+
+    expect(children).toEqual([{ id: "c", name: "C" }]);
+    expect(await rows(db, "items")).toEqual([{ id: "a", name: "A", qty: null }]);
+    expect(await rows(db, "children")).toEqual([{ id: "c", name: "C" }]);
+    const logged = await w.opsSince(0);
+    expect(logged.map(({ op }) => ["table" in op ? op.table : undefined, rowOf(op)])).toEqual([
+      ["items", "a"],
+      ["children", "c"],
+    ]);
+    expect(ops.map((op) => op.hlc)).toEqual(logged.map(({ op }) => op.hlc));
+    expect(ops[1].hlc > ops[0].hlc).toBe(true);
+    for (const { op } of logged) expect(op.id).toBe(op.hlc);
+  });
+
+  test("a throw after the first write rolls back the write and its log entries", async () => {
+    const { db } = setup();
+    const w = await writer(db);
+
+    await expect(
+      w.transaction(async (tx) => {
+        await tx.write("items", [{ kind: "set", row: "a", fields: { name: "x" } }]);
+        throw new Error("stop");
+      }),
+    ).rejects.toThrow("stop");
+
+    expect(await rows(db, "items")).toEqual([]);
+    expect(await w.opsSince(0)).toEqual([]);
+    expect(
+      await db.getFirstAsync<{ value: string }>("SELECT value FROM _devdaj_meta WHERE key = ?", [
+        "hlc",
+      ]),
+    ).toBeNull();
+  });
+
+  test("a validation error in the second write rolls back the first", async () => {
+    const { db } = setup();
+    const w = await writer(db);
+
+    await expect(
+      w.transaction(async (tx) => {
+        await tx.write("items", [{ kind: "set", row: "a", fields: { name: "x" } }]);
+        await tx.write("items", [{ kind: "set", row: "b", fields: { id: "b", name: "y" } }]);
+      }),
+    ).rejects.toThrow("Cannot set primary-key column");
+
+    expect(await rows(db, "items")).toEqual([]);
+    expect(await w.opsSince(0)).toEqual([]);
+  });
+
+  test("reads inside a transaction see rows written earlier in it", async () => {
+    const { db } = setup();
+    const w = await writer(db);
+
+    const result = await w.transaction(async (tx) => {
+      await tx.write("items", [{ kind: "set", row: "a", fields: { name: "x", qty: 1 } }]);
+      const first = await tx.getFirst<{ name: string }>("SELECT name FROM items WHERE id = ?", [
+        "a",
+      ]);
+      const all = await tx.getAll<{ id: string; qty: number }>(
+        "SELECT id, qty FROM items ORDER BY id",
+      );
+      return { first, all };
+    });
+
+    expect(result).toEqual({ first: { name: "x" }, all: [{ id: "a", qty: 1 }] });
+  });
+
+  test("a transaction handle throws once its task has finished", async () => {
+    const { db } = setup();
+    const w = await writer(db);
+    let tx!: WriterTransaction;
+    await w.transaction(async (handle) => {
+      tx = handle;
+      return 1;
+    });
+
+    const change: Change = { kind: "set", row: "a", fields: { name: "x" } };
+    await expect(tx.write("items", [change])).rejects.toThrow("Writer transaction is closed");
+    await expect(tx.purge()).rejects.toThrow("Writer transaction is closed");
+    await expect(tx.getFirst("SELECT * FROM items")).rejects.toThrow(
+      "Writer transaction is closed",
+    );
+    await expect(tx.getAll("SELECT * FROM items")).rejects.toThrow("Writer transaction is closed");
+    expect(await rows(db, "items")).toEqual([]);
+  });
+
+  test("serializes concurrent transactions without nesting BEGIN", async () => {
+    const { db } = setup();
+    const w = await writer(db);
+    const results = await Promise.all(
+      Array.from({ length: 20 }, (_, i) =>
+        w.transaction(async (tx) => {
+          const [op] = await tx.write("items", [
+            { kind: "set", row: `r${i}`, fields: { name: `n${i}` } },
+          ]);
+          return op;
+        }),
+      ),
+    );
+
+    const hlcs = results.map((op) => op.hlc);
+    expect(hlcs).toHaveLength(20);
+    expect(new Set(hlcs).size).toBe(20);
+    for (let i = 1; i < hlcs.length; i++) expect(hlcs[i] > hlcs[i - 1]).toBe(true);
+    expect((await w.opsSince(0)).map(({ op }) => op.hlc)).toEqual(hlcs);
+    expect(await rows(db, "items")).toHaveLength(20);
   });
 });
 

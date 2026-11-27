@@ -50,3 +50,31 @@ Shared pieces, built once and reused. Each lands as its own small commits.
 ## Apps
 
 Added one at a time below, in build order.
+
+### 1. Fitnexx (in progress)
+
+Gym and macro tracker; the first app on the foundations.
+
+**Shipped:** workout logging with templates and analysis, meal log with
+barcode lookup (Open Food Facts) and the AI food scanner, body metrics, water,
+gyms, LAN sync, Pro AI chat. Shared tables in `data.db`: `meals`, `workouts`,
+`workout_exercises`, `workout_sets`, `body_metrics`, `water_log`,
+`preferences`.
+
+**Planned, in commit-sized steps:**
+
+1. Publish `public_v1_*` views over the shared tables; siblings switch to them.
+2. Write the change log for every insert, update and delete.
+3. Exclude `data.db` from cloud backup.
+4. "Your data" screen on the shared headless logic.
+5. Encrypted export/restore replacing the plain export.
+6. Optional sign-in: every screen works signed out; Pro and sync ask for an
+   account.
+7. Weight trend with a moving average.
+8. Progression rules (suggest the next weight or reps from recent sets).
+9. Verified local food data: cache barcode results on the device so known
+   foods work offline.
+
+**Open questions:** which tables siblings actually need in `public_v1`
+(`preferences` probably stays internal); moving-average window; the
+progression rule set.

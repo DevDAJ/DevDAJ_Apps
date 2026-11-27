@@ -9,6 +9,9 @@ export const APP_ID_PREFIX = "tech.devdaj.app";
 /** iOS: the app group every DevDAJ app joins. Inside it is one folder per app. */
 export const APP_GROUP = "group.tech.devdaj.shared";
 
+/** iOS: the keychain access group suffix; the full group is `<TeamID>.tech.devdaj.shared`. */
+export const KEYCHAIN_GROUP = "tech.devdaj.shared";
+
 /** Android: signature-level permission guarding each app's data provider (only same-key apps get it). */
 export const READ_PERMISSION = "tech.devdaj.permission.APP_DATA";
 

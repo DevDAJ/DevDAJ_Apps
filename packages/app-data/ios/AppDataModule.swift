@@ -24,12 +24,22 @@ public class AppDataModule: Module {
     return FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group)
   }
 
+  /// Nil when the keychain group is missing or Xcode has not expanded the AppIdentifierPrefix.
+  private var keychainGroup: String? {
+    guard let group = Bundle.main.object(forInfoDictionaryKey: "DevdajKeychainGroup") as? String,
+      !group.contains("$(")
+    else { return nil }
+    return group
+  }
+
   public func definition() -> ModuleDefinition {
     Name("DevdajAppData")
 
     Constant("appName") { self.appName }
 
     Constant("appsDirectory") { self.appsDirectory?.path }
+
+    Constant("keychainGroup") { self.keychainGroup }
 
     Function("databaseExists") { (app: String) -> Bool in
       guard Self.isValidAppName(app), let directory = self.appsDirectory else { return false }

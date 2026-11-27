@@ -145,9 +145,11 @@
       "name": "@devdaj/app-data",
       "version": "0.1.0",
       "devDependencies": {
+        "@devdaj/crypto": "workspace:*",
         "@types/node": "^24",
         "expo": "~57.0.20",
         "expo-sqlite": "~57.0.5",
+        "libsodium-wrappers-sumo": "0.8.4",
         "typescript": "^7.0.2",
         "vite-plus": "catalog:",
       },

@@ -56,6 +56,7 @@ describe("shared names", () => {
     const { internal } = require("../plugin/index.js");
     expect(internal.APP_ID_PREFIX).toBe(shared.APP_ID_PREFIX);
     expect(internal.APP_GROUP).toBe(shared.APP_GROUP);
+    expect(internal.KEYCHAIN_GROUP).toBe(shared.KEYCHAIN_GROUP);
     expect(internal.AUTHORITY_SUFFIX).toBe(shared.AUTHORITY_SUFFIX);
   });
 });
@@ -92,6 +93,14 @@ describe("own database", () => {
     const { appData } = setup("ios", null);
     expect(appData.configured).toBe(false);
     await expect(appData.open()).rejects.toMatchObject({ code: "not_configured" });
+  });
+
+  test("exposes the keychain group on iOS only", () => {
+    const group = "ABCDE12345.tech.devdaj.shared";
+    expect(setup("ios", { keychainGroup: group }).appData.keychainGroup).toBe(group);
+    expect(setup("android", { keychainGroup: group }).appData.keychainGroup).toBeNull();
+    expect(setup("ios", null).appData.keychainGroup).toBeNull();
+    expect(setup("ios").appData.keychainGroup).toBeNull();
   });
 });
 
@@ -169,6 +178,39 @@ describe("config plugin", () => {
     const once = internal.applyEntitlements({});
     expect(internal.applyEntitlements(once)).toEqual({
       "com.apple.security.application-groups": ["group.tech.devdaj.shared"],
+      "keychain-access-groups": [
+        "$(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)",
+        "$(AppIdentifierPrefix)tech.devdaj.shared",
+      ],
+    });
+    // The app's own group stays first, so other keychain items do not default to the shared one.
+    expect(once["keychain-access-groups"][0]).toBe(internal.OWN_KEYCHAIN_GROUP);
+  });
+
+  test("keeps existing keychain groups and adds the shared group once", () => {
+    const entitlements = {
+      "com.apple.security.application-groups": ["group.tech.devdaj.shared"],
+      "keychain-access-groups": ["tech.devdaj.app.fitnexx"],
+    };
+    const once = internal.applyEntitlements(entitlements);
+    expect(once["keychain-access-groups"]).toEqual([
+      "tech.devdaj.app.fitnexx",
+      internal.KEYCHAIN_GROUP_FULL,
+    ]);
+    expect(internal.applyEntitlements(once)["keychain-access-groups"]).toEqual([
+      "tech.devdaj.app.fitnexx",
+      internal.KEYCHAIN_GROUP_FULL,
+    ]);
+    expect(internal.KEYCHAIN_GROUP_FULL).toBe("$(AppIdentifierPrefix)tech.devdaj.shared");
+  });
+
+  test("adds the app name, groups and keychain group to Info.plist", () => {
+    const infoPlist: Record<string, unknown> = {};
+    internal.applyInfoPlist(infoPlist, "fitnexx");
+    expect(infoPlist).toEqual({
+      DevdajAppName: "fitnexx",
+      DevdajAppGroup: "group.tech.devdaj.shared",
+      DevdajKeychainGroup: "$(AppIdentifierPrefix)tech.devdaj.shared",
     });
   });
 

@@ -2,7 +2,7 @@ import { AIMessage, HumanMessage, SystemMessage } from "@langchain/core/messages
 import type { MessageContent } from "@langchain/core/messages";
 import { ChatOpenAI } from "@langchain/openai";
 import { fitnexxEnv } from "../env";
-import { OPENROUTER_BASE_URL, OPENROUTER_MODEL_KWARGS } from "./openrouter";
+import { OPENROUTER_BASE_URL, OPENROUTER_MODEL_KWARGS } from "../../../shared/openrouter";
 
 /**
  * Pro AI chat: one LangChain chain over OpenRouter, the same stack as the food

@@ -71,7 +71,7 @@ over OpenRouter (`https://openrouter.ai/api/v1`, one `OPENROUTER_API_KEY`).
 No bring-your-own-key mode; apps never store or send provider keys. Every
 request enforces Zero Data Retention and denies data collection
 (`provider: { zdr: true, data_collection: "deny" }`, shared policy in
-`apps/web/src/server/apps/fitnexx/lib/openrouter.ts`), so OpenRouter routes
+`apps/web/src/server/shared/openrouter.ts`), so OpenRouter routes
 only to endpoints that do not retain prompts or responses and excludes
 providers that store or train on them. OpenRouter expresses this as request
 body fields, not headers.

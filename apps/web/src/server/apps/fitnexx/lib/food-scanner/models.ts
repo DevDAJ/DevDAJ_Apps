@@ -2,7 +2,7 @@ import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { ChatOpenAI } from "@langchain/openai";
 import type { BaseLanguageModelInput } from "@langchain/core/language_models/base";
-import { OPENROUTER_BASE_URL, OPENROUTER_MODEL_KWARGS } from "../openrouter";
+import { OPENROUTER_BASE_URL, OPENROUTER_MODEL_KWARGS } from "../../../../shared/openrouter";
 import {
   NutritionResultSchema,
   VisionComponentSchema,

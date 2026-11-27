@@ -40,7 +40,7 @@ table. Verify against the code before relying on any detail here.
    the food scanner stays two-step with the permanent `food_component`
    library and idempotent requests. Every OpenRouter request enforces Zero
    Data Retention and denies data collection
-   (`provider: { zdr: true, data_collection: "deny" }`, `lib/openrouter.ts`).
+   (`provider: { zdr: true, data_collection: "deny" }`, `shared/openrouter.ts`).
 5. Telemetry is errors-only, opt-in on mobile, one PostHog key per project,
    anonymous (no person profiles, no user ids), no-op without a key.
 6. Guests never get Pro or a food-analysis allowance; Pro routes require a

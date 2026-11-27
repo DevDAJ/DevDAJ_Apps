@@ -44,7 +44,7 @@ vp run <workspace>#<script>  # e.g. vp run web#test, vp run web#typecheck
    with the permanent `food_component` library and idempotent requests.
    Every OpenRouter request enforces Zero Data Retention and denies data
    collection (`provider: { zdr: true, data_collection: "deny" }`, shared
-   policy in `lib/openrouter.ts`).
+   policy in `shared/openrouter.ts`).
 5. **Telemetry is errors-only**, opt-in on mobile (off by default), one
    PostHog key per project, anonymous, no-op without a key. Expected 4xx
    responses are not captured.

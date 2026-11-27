@@ -58,6 +58,9 @@ describe("pantry v1 auth", () => {
     ["POST", `/v1/pantry/households/${id}/invites`, message],
     ["DELETE", `/v1/pantry/households/${id}/members/me`, message],
     ["POST", `/v1/pantry/households/${id}/sync`, message],
+    ["GET", `/v1/pantry/households/${id}/imports`, message],
+    ["POST", `/v1/pantry/households/${id}/imports`, message],
+    ["POST", "/v1/pantry/recipes/parse", message],
   ])("%s %s requires a bearer token", async (method, path, expected) => {
     const init = method === "GET" ? { method } : json(method, {});
     const res = await call(path, init);

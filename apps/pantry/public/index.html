@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="theme-color" content="#0b100c" />
+    <title>Pantry Helper</title>
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" href="/icon.svg" />
+    <!-- Expo's default web reset: React Native layouts need a full-height flex root. -->
+    <style>
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        overflow: hidden;
+        background-color: #0b100c;
+      }
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      if (
+        "serviceWorker" in navigator &&
+        (location.protocol === "https:" || location.hostname === "localhost")
+      ) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register("/sw.js").catch(function () {});
+        });
+      }
+    </script>
+  </body>
+</html>

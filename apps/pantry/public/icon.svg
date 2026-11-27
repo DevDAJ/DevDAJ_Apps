@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Pantry Helper">
+  <rect width="512" height="512" rx="112" fill="#22c55e" />
+  <path d="M112 268h288c0 78-64 132-144 132s-144-54-144-132Z" fill="#ffffff" />
+  <rect x="96" y="248" width="320" height="30" rx="15" fill="#ffffff" />
+  <path d="M252 238c-6-66 20-110 90-132 8 68-18 114-90 132Z" fill="#ffffff" />
+  <path d="M250 224c-4-40-24-66-64-80-4 44 16 72 64 80Z" fill="#d7f7e2" />
+</svg>
